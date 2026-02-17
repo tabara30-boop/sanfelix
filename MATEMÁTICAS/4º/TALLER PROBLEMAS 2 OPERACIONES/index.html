@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matemáticas en Candás</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/open-dyslexic@1.1.0/font.min.css">
+    
+    <style>
+        :root {
+            --font-main: 'OpenDyslexic', sans-serif;
+            --font-math: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: #f1f5f9;
+            font-size: 1.4rem;
+            color: #334155;
+        }
+
+        .drag-item {
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            transition: all 0.2s;
+            border-width: 4px;
+            text-align: center;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-width: fit-content;
+        }
+
+        .drag-item:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            z-index: 100;
+        }
+
+        .drop-zone {
+            min-height: 200px;
+            border: 4px dashed #94a3b8;
+            border-radius: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .drop-zone.over {
+            background-color: #e0f2fe;
+            border-color: #0ea5e9;
+        }
+
+        /* --- ESTILOS PARA LA DIVISIÓN ESPAÑOLA (CAJA) --- */
+        .division-wrapper {
+            display: flex;
+            align-items: flex-start;
+            font-family: var(--font-math);
+            font-weight: 900;
+            font-size: 2rem;
+            line-height: 1.2;
+        }
+
+        .dividend-grid {
+            display: grid;
+            justify-items: center;
+            row-gap: 2px;
+        }
+
+        .div-digit {
+            padding: 0 4px;
+        }
+
+        .divisor-section {
+            margin-left: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .divisor-box {
+            border-left: 3px solid #000;
+            border-bottom: 3px solid #000;
+            padding: 0 10px;
+            margin-bottom: 2px;
+        }
+
+        .quotient-box {
+            padding-left: 10px;
+            letter-spacing: 2px;
+            color: #1e40af;
+        }
+
+        /* --- ESTILOS GENERALES OPERACIONES --- */
+        .vertical-op {
+            font-family: var(--font-math);
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+            font-weight: 900;
+            font-size: 2.2rem;
+            padding: 10px;
+        }
+
+        .math-line {
+            border-bottom: 4px solid #000;
+            width: 100%;
+            text-align: right;
+            margin-bottom: 4px;
+        }
+
+        .item-data { border-color: #3b82f6; color: #1e40af; background-color: #eff6ff; }
+        .item-target { border-color: #ef4444; color: #991b1b; background-color: #fef2f2; }
+        .item-op { border-color: #64748b; color: #1e293b; background-color: #f8fafc; }
+        .item-sol { border-color: #22c55e; color: #166534; background-color: #f0fdf4; }
+
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="max-w-7xl mx-auto bg-white rounded-[2.5rem] shadow-2xl border-8 border-cyan-100 overflow-hidden">
+        <!-- Header -->
+        <header class="bg-cyan-600 p-8 text-white text-center shadow-lg relative overflow-hidden">
+            <h1 class="text-4xl md:text-5xl font-bold mb-2 uppercase tracking-wide relative z-10">Mates en Candás</h1>
+            <p class="text-xl md:text-2xl relative z-10 opacity-90">Ayuda al grupo del San Félix a resolver el lío</p>
+        </header>
+
+        <main class="p-6 md:p-8">
+            <!-- Panel del Problema -->
+            <div class="bg-orange-50 border-l-[12px] border-orange-400 p-6 md:p-8 rounded-3xl mb-10 shadow-sm">
+                <h2 class="text-2xl font-bold text-orange-800 mb-3 uppercase tracking-wider">¿Qué ha pasado en Candás?</h2>
+                <p id="problem-text" class="text-3xl md:text-4xl leading-tight text-slate-800"></p>
+            </div>
+
+            <!-- Cajón de Piezas -->
+            <div class="mb-10">
+                <h3 class="text-lg font-bold text-slate-400 mb-4 uppercase tracking-widest text-center">Piezas desordenadas:</h3>
+                <div id="source-container" class="flex flex-wrap gap-4 p-6 bg-slate-50 rounded-[2rem] border-4 border-slate-200 min-h-[180px] items-center justify-center">
+                    <!-- Piezas generadas aquí -->
+                </div>
+            </div>
+
+            <!-- Tablero de Organización -->
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                <!-- Columna 1: Datos -->
+                <div class="xl:col-span-1 flex flex-col gap-6">
+                    <div>
+                        <span class="block text-blue-600 font-bold mb-2 ml-2">DATOS (AZUL)</span>
+                        <div class="drop-zone" data-type="data" id="zone-data"></div>
+                    </div>
+                    <div>
+                        <span class="block text-red-600 font-bold mb-2 ml-2">DATO A AVERIGUAR</span>
+                        <div class="drop-zone" data-type="target" id="zone-target"></div>
+                    </div>
+                </div>
+
+                <!-- Columna 2: Operaciones Indicadas -->
+                <div class="xl:col-span-1">
+                    <span class="block text-slate-500 font-bold mb-2 text-center">OPERACIONES INDICADAS</span>
+                    <div class="drop-zone" data-type="indicated" id="zone-indicated"></div>
+                </div>
+
+                <!-- Columna 3: Operaciones Realizadas -->
+                <div class="xl:col-span-2">
+                    <span class="block text-slate-500 font-bold mb-2 text-center">OPERACIONES REALIZADAS</span>
+                    <div class="drop-zone" data-type="vertical" id="zone-vertical"></div>
+                </div>
+            </div>
+
+            <!-- Fila Inferior: Solución -->
+            <div class="mt-8">
+                <span class="block text-green-600 font-bold mb-2 ml-2">SOLUCIÓN FINAL (ORACIÓN)</span>
+                <div class="drop-zone w-full !items-start !justify-start !p-8" data-type="solution" id="zone-solution"></div>
+            </div>
+
+            <!-- Botonera -->
+            <div class="mt-12 flex flex-col sm:flex-row justify-center gap-6 pb-8">
+                <button id="btn-check" class="bg-green-500 hover:bg-green-600 text-white text-3xl font-bold py-5 px-10 rounded-[2rem] shadow-xl transition-transform active:scale-95 flex items-center gap-3">
+                    <span>✅</span> Comprobar
+                </button>
+                <button id="btn-new" class="bg-cyan-500 hover:bg-cyan-600 text-white text-3xl font-bold py-5 px-10 rounded-[2rem] shadow-xl transition-transform active:scale-95 flex items-center gap-3">
+                    <span>🔄</span> Nuevo Problema
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Feedback -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/90 hidden flex items-center justify-center p-4 z-[200]">
+        <div class="bg-white rounded-[3rem] p-10 max-w-xl w-full text-center border-[10px] border-cyan-300 relative">
+            <div id="modal-icon" class="text-8xl mb-4"></div>
+            <h2 id="modal-title" class="text-4xl font-bold mb-4 text-slate-800"></h2>
+            <p id="modal-desc" class="text-2xl text-slate-600 mb-8 leading-relaxed"></p>
+            <button onclick="closeModal()" class="bg-cyan-600 hover:bg-cyan-700 text-white text-2xl font-bold py-4 px-12 rounded-2xl w-full shadow-lg transition-colors">
+                Continuar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Lista completa de protagonistas
+        const fullProtagonists = [
+            "Martín", "Catalina", "Derek", "Enzo", "Dani R", "Dani B", 
+            "Xelaz", "Mauro", "Diego", "Valle", "Olivia", "Diana", 
+            "Inés", "Álvaro", "Keisi", "Nerea", "Alba"
+        ];
+
+        // Utilidades
+        const getRandom = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
+
+        // Selección aleatoria de 3 amigos para el problema actual
+        function getFriends() {
+            const shuffled = shuffle([...fullProtagonists]);
+            return [shuffled[0], shuffled[1], shuffled[2]];
+        }
+
+        // --- Generador de la División Paso a Paso (Algoritmo Español) ---
+        function renderStepByStepDivision(dividend, divisor) {
+            const divStr = dividend.toString();
+            const digits = divStr.split('').map(Number);
+            const gridCols = digits.length;
+            
+            let quotientStr = "";
+            let rows = []; 
+
+            // 1. Fila inicial
+            let headerRow = digits.map(d => `<div class="div-digit">${d}</div>`).join('');
+
+            // 2. Lógica
+            let currentVal = 0;
+            let i = 0;
+
+            while (i < digits.length) {
+                currentVal = (currentVal * 10) + digits[i];
+                
+                // Si la cifra bajada es menor que el divisor al inicio
+                if (currentVal < divisor && i < digits.length - 1 && quotientStr === "") {
+                    i++;
+                    currentVal = (currentVal * 10) + digits[i];
+                }
+
+                let q = Math.floor(currentVal / divisor);
+                let r = currentVal % divisor;
+                
+                quotientStr += q;
+
+                if (i < digits.length - 1) {
+                   // Fila intermedia: Resto + siguiente cifra
+                   let rowContent = "";
+                   for(let k=0; k<gridCols; k++) {
+                       if(k === i) {
+                           rowContent += `<div class="div-digit font-bold text-blue-600">${r}</div>`;
+                       } else if (k === i + 1) {
+                           rowContent += `<div class="div-digit">${digits[k]}</div>`;
+                       } else {
+                           rowContent += `<div></div>`; 
+                       }
+                   }
+                   rows.push(rowContent);
+                   currentVal = r; 
+                } else {
+                    // Resto Final
+                    let rowContent = "";
+                    for(let k=0; k<gridCols; k++) {
+                       if(k === i) {
+                           rowContent += `<div class="div-digit font-bold text-green-600 border-t-2 border-black border-double pt-1">${r}</div>`;
+                       } else {
+                           rowContent += `<div></div>`;
+                       }
+                   }
+                   rows.push(rowContent);
+                }
+                i++;
+            }
+
+            return `
+                <div class="division-wrapper">
+                    <div class="dividend-grid" style="grid-template-columns: repeat(${gridCols}, 1fr);">
+                        ${headerRow}
+                        ${rows.join('')}
+                    </div>
+                    <div class="divisor-section">
+                        <div class="divisor-box">${divisor}</div>
+                        <div class="quotient-box">${quotientStr}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createVerticalOp(a, b, op, res) {
+            if (op === ':') return renderStepByStepDivision(a, b);
+            
+            const top = Math.max(a, b);
+            const bottom = Math.min(a, b);
+            const symbol = op === '*' ? 'x' : op;
+            
+            return `
+                <div class="vertical-op">
+                    <div>${top}</div>
+                    <div class="math-line">${symbol} ${bottom}</div>
+                    <div class="text-blue-800">${res}</div>
+                </div>
+            `;
+        }
+
+        // --- Escenarios Ambientados en Candás ---
+        function generateProblem() {
+            const isAdvanced = Math.random() < 0.90; 
+            const friends = getFriends(); // [Amigo1, Amigo2, Amigo3]
+            let p = {};
+
+            // Selección de escenario aleatorio para Candás
+            // 1: Alimerka, 2: Bocata, 3: La Rula, 4: Sidrería, 5: Colegio San Félix, 6: Plaza Baragaña
+            const scenario = getRandom(1, 6);
+
+            if (isAdvanced) {
+                if (Math.random() < 0.5) {
+                    // --- MULTIPLICACIÓN + RESTA ---
+                    if (scenario === 1) { // Alimerka
+                        const cajas = getRandom(4, 9);
+                        const precio = getRandom(3, 8);
+                        const total = cajas * precio;
+                        const pago = 100; // Billete
+                        const vuelta = pago - total;
+                        p = {
+                            text: `${friends[0]} va al Alimerka de Candás y compra ${cajas} cajas de helados. Cada caja cuesta ${precio} euros. Si paga con un billete de ${pago} euros, ¿cuánto dinero le devuelven?`,
+                            data: [`${friends[0]}: ${cajas} cajas`, `Caja: ${precio} euros`, `Billete: ${pago} euros`],
+                            target: "¿Cuántos euros le devuelven?",
+                            indicated: [`${cajas} cajas x ${precio} euros = **${total} euros**`, `${pago} euros - ${total} euros = **${vuelta} euros**`],
+                            verticals: [[cajas, precio, '*', total], [pago, total, '-', vuelta]],
+                            solution: `En el Alimerka le devuelven ${vuelta} euros.`
+                        };
+                    } else if (scenario === 3) { // La Rula
+                        const cajas = getRandom(15, 25);
+                        const kgs = getRandom(5, 9);
+                        const totalKg = cajas * kgs;
+                        const vendidos = getRandom(50, totalKg - 10);
+                        const quedan = totalKg - vendidos;
+                        p = {
+                            text: `En la rula del muelle de Candás han descargado ${cajas} cajas de sardinas. Cada caja pesa ${kgs} kilos. Si ${friends[1]} ya ha vendido ${vendidos} kilos, ¿cuántos kilos quedan en la rula?`,
+                            data: [`Rula: ${cajas} cajas`, `Caja: ${kgs} kilos`, `Vendido: ${vendidos} kilos`],
+                            target: "¿Cuántos kilos quedan?",
+                            indicated: [`${cajas} cajas x ${kgs} kilos = **${totalKg} kilos**`, `${totalKg} kilos - ${vendidos} kilos = **${quedan} kilos**`],
+                            verticals: [[cajas, kgs, '*', totalKg], [totalKg, vendidos, '-', quedan]],
+                            solution: `En la rula quedan todavía ${quedan} kilos de sardinas.`
+                        };
+                    } else { // Bocata (Chucherías)
+                        const bolsas = getRandom(6, 12);
+                        const chuches = getRandom(5, 10);
+                        const total = bolsas * chuches;
+                        const regaladas = getRandom(10, total - 10);
+                        const fin = total - regaladas;
+                        p = {
+                            text: `${friends[2]} compra en la tienda Bocata ${bolsas} bolsas de gominolas para su cumple. Cada bolsa trae ${chuches} gominolas. Si regala ${regaladas} a sus amigos en la plaza, ¿cuántas le quedan?`,
+                            data: [`${friends[2]}: ${bolsas} bolsas`, `Bolsa: ${chuches} gominolas`, `Regala: ${regaladas} gominolas`],
+                            target: "¿Cuántas gominolas le quedan?",
+                            indicated: [`${bolsas} bolsas x ${chuches} gominolas = **${total} gominolas**`, `${total} gominolas - ${regaladas} gominolas = **${fin} gominolas**`],
+                            verticals: [[bolsas, chuches, '*', total], [total, regaladas, '-', fin]],
+                            solution: `A ${friends[2]} le quedan ${fin} gominolas.`
+                        };
+                    }
+                } else {
+                    // --- DIVISIÓN + SUMA ---
+                    if (scenario === 5) { // Colegio San Félix
+                        const lapices = getRandom(80, 200);
+                        const clases = getRandom(4, 8); // Divisor
+                        // Ajustar para que sea división con resto 0 preferiblemente o simple
+                        const perClase = Math.floor(lapices / clases);
+                        const adjustedLapices = perClase * clases; 
+                        
+                        const nuevos = getRandom(20, 50);
+                        const totalAula = perClase + nuevos;
+
+                        p = {
+                            text: `En el Colegio San Félix reparten ${adjustedLapices} lápices nuevos entre ${clases} clases en partes iguales. Si en la clase de ${friends[0]} ya tenían ${nuevos} lápices guardados, ¿cuántos lápices tienen ahora en total en esa clase?`,
+                            data: [`Colegio: ${adjustedLapices} lápices`, `Clases: ${clases}`, `Tenían: ${nuevos} lápices`],
+                            target: "¿Cuántos lápices tienen ahora en la clase?",
+                            indicated: [`${adjustedLapices} lápices : ${clases} clases = **${perClase} lápices**`, `${perClase} lápices + ${nuevos} lápices = **${totalAula} lápices**`],
+                            verticals: [[adjustedLapices, clases, ':', perClase], [perClase, nuevos, '+', totalAula]],
+                            solution: `En la clase de ${friends[0]} tienen ahora ${totalAula} lápices.`
+                        };
+                    } else if (scenario === 6) { // Plaza la Baragaña (Cromos/Canicas)
+                        const total = getRandom(40, 120);
+                        const grupos = getRandom(3, 6);
+                        const porGrupo = Math.floor(total / grupos);
+                        const realTotal = porGrupo * grupos;
+                        const ganados = getRandom(5, 15);
+                        const fin = porGrupo + ganados;
+                        p = {
+                            text: `${friends[1]} está en la Plaza la Baragaña con ${realTotal} canicas y las reparte en ${grupos} montones iguales. Si luego gana ${ganados} canicas más jugando con un montón, ¿cuántas canicas tiene en ese montón ahora?`,
+                            data: [`${friends[1]}: ${realTotal} canicas`, `Montones: ${grupos}`, `Gana: ${ganados} canicas`],
+                            target: "¿Cuántas canicas hay en el montón final?",
+                            indicated: [`${realTotal} canicas : ${grupos} montones = **${porGrupo} canicas**`, `${porGrupo} canicas + ${ganados} canicas = **${fin} canicas**`],
+                            verticals: [[realTotal, grupos, ':', porGrupo], [porGrupo, ganados, '+', fin]],
+                            solution: `En ese montón hay ahora ${fin} canicas.`
+                        };
+                    } else { // Sidrería (Vasos/Botellas)
+                        const totalBotellas = getRandom(24, 60);
+                        const cajas = getRandom(3, 6);
+                        const porCaja = Math.floor(totalBotellas / cajas); 
+                        const adjustedTotal = porCaja * cajas;
+                        const extra = getRandom(2, 5);
+                        const totalCaja = porCaja + extra;
+                        p = {
+                            text: `En una sidrería de Candás quieren guardar ${adjustedTotal} botellas de sidra en ${cajas} cajas iguales. Si en una caja meten ${extra} botellas más de regalo, ¿cuántas botellas habrá en esa caja?`,
+                            data: [`Sidrería: ${adjustedTotal} botellas`, `Cajas: ${cajas}`, `Regalo: ${extra} botellas`],
+                            target: "¿Cuántas botellas hay en esa caja?",
+                            indicated: [`${adjustedTotal} botellas : ${cajas} cajas = **${porCaja} botellas**`, `${porCaja} botellas + ${extra} botellas = **${totalCaja} botellas**`],
+                            verticals: [[adjustedTotal, cajas, ':', porCaja], [porCaja, extra, '+', totalCaja]],
+                            solution: `En esa caja habrá un total de ${totalCaja} botellas.`
+                        };
+                    }
+                }
+            } else {
+                // --- SUMA + RESTA (10%) ---
+                // Restaurante de Candás
+                const n1 = getRandom(50, 150);
+                const n2 = getRandom(30, 80);
+                const total = n1 + n2;
+                const gasto = getRandom(40, 100);
+                const fin = total - gasto;
+                
+                p = {
+                    text: `${friends[0]} tiene ${n1} euros y ${friends[2]} tiene ${n2} euros. Van a cenar a un restaurante de Candás y la cena les cuesta ${gasto} euros. ¿Cuánto dinero les sobra para helados?`,
+                    data: [`${friends[0]}: ${n1} euros`, `${friends[2]}: ${n2} euros`, `Cena: ${gasto} euros`],
+                    target: "¿Cuánto dinero les sobra?",
+                    indicated: [`${n1} euros + ${n2} euros = **${total} euros**`, `${total} euros - ${gasto} euros = **${fin} euros**`],
+                    verticals: [[n1, n2, '+', total], [total, gasto, '-', fin]],
+                    solution: `A los amigos les sobran ${fin} euros.`
+                };
+            }
+            return p;
+        }
+
+        // --- Renderizado y Lógica UI ---
+        function render() {
+            const prob = generateProblem();
+            document.getElementById('problem-text').innerText = prob.text;
+            
+            const source = document.getElementById('source-container');
+            source.innerHTML = '';
+            document.querySelectorAll('.drop-zone').forEach(z => z.innerHTML = '');
+
+            let items = [];
+
+            // Datos
+            prob.data.forEach(d => items.push({ type: 'data', html: d, css: 'item-data' }));
+            // Objetivo
+            items.push({ type: 'target', html: prob.target, css: 'item-target font-bold' });
+            // Indicadas
+            prob.indicated.forEach(ind => {
+                const h = ind.replace(/\*\*(.*?)\*\*/g, '<span class="border-b-2 border-black font-black mx-1">$1</span>');
+                items.push({ type: 'indicated', html: h, css: 'item-op' });
+            });
+            // Verticales
+            prob.verticals.forEach(v => {
+                const html = createVerticalOp(v[0], v[1], v[2], v[3]);
+                items.push({ type: 'vertical', html: html, css: 'item-op !p-2' });
+            });
+            // Solución
+            items.push({ type: 'solution', html: prob.solution, css: 'item-sol font-bold w-full text-left text-2xl' });
+
+            // Mezclar y pintar
+            shuffle(items).forEach((item, idx) => {
+                const div = document.createElement('div');
+                div.id = `piece-${idx}`;
+                div.draggable = true;
+                div.className = `drag-item p-4 rounded-xl ${item.css}`;
+                div.dataset.type = item.type;
+                div.innerHTML = item.html;
+                
+                div.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text', e.target.id);
+                    e.target.classList.add('opacity-50');
+                });
+                div.addEventListener('dragend', e => {
+                    e.target.classList.remove('opacity-50');
+                });
+                
+                source.appendChild(div);
+            });
+        }
+
+        // Drag & Drop Listeners
+        const zones = document.querySelectorAll('.drop-zone, #source-container');
+        zones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault();
+                if (zone.classList.contains('drop-zone')) zone.classList.add('over');
+            });
+            zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('over');
+                const id = e.dataTransfer.getData('text');
+                const el = document.getElementById(id);
+                if (el) zone.appendChild(el);
+            });
+        });
+
+        function check() {
+            const types = ['data', 'target', 'indicated', 'vertical', 'solution'];
+            let allGood = true;
+            let incomplete = false;
+
+            types.forEach(t => {
+                const z = document.getElementById(`zone-${t}`);
+                const children = z.querySelectorAll('.drag-item');
+                if (children.length === 0) incomplete = true;
+                children.forEach(c => {
+                    if (c.dataset.type !== t) allGood = false;
+                });
+            });
+
+            if (incomplete) showModal('🧩', 'Faltan Piezas', 'Asegúrate de colocar todas las piezas del cajón en el tablero.');
+            else if (!allGood) showModal('🧐', 'Revisa bien', 'Hay piezas que no están en su columna correcta. Fíjate en los colores.');
+            else showModal('🌟', '¡Muy bien!', '¡Has resuelto el problema de Candás perfectamente!');
+        }
+
+        function showModal(icon, title, desc) {
+            const m = document.getElementById('modal');
+            document.getElementById('modal-icon').innerText = icon;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-desc').innerText = desc;
+            m.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        document.getElementById('btn-new').addEventListener('click', render);
+        document.getElementById('btn-check').addEventListener('click', check);
+
+        // Iniciar
+        window.onload = render;
+    </script>
+</body>
+</html>
