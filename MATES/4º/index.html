@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MATEMÁTICAS</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --primary: #2c3e50;
+            --card-bg: #ffffff;
+            --hover-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            --accent-blue: #3498db;
+            --accent-orange: #e67e22;
+            --accent-purple: #9b59b6;
+            --accent-green: #27ae60;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--primary);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            background: var(--card-bg);
+            padding: 20px 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+            color: var(--primary);
+            text-transform: uppercase;
+        }
+
+        p.subtitle {
+            margin-top: 10px;
+            color: #7f8c8d;
+        }
+
+        /* Contenedor Principal */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 30px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        /* Estilo de las Tarjetas */
+        .card {
+            background: var(--card-bg);
+            padding: 30px 20px;
+            border-radius: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--primary);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border-top: 6px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        /* Iconos */
+        .icon-box {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+
+        .card:hover .icon-box {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        h2 { margin: 0; font-size: 1.4rem; font-weight: 700; }
+        span.desc { display: block; margin-top: 10px; font-size: 0.9rem; color: #95a5a6; }
+
+        /* Botón de acción dentro de la tarjeta */
+        .btn-enter {
+            margin-top: 20px;
+            background: #eee;
+            color: #555;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .card:hover .btn-enter {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* --- Estilos Específicos por Tarjeta (Colores) --- */
+        
+        /* 1. DIVIDIDIR ENTRE 2 */
+        .style-div { border-color: var(--accent-blue); }
+        .style-div .icon-box { color: var(--accent-blue); background: #ebf5fb; }
+
+        /* 2. MULTIPLICAR POR 2 CIFRAS */
+        .style-dob { border-color: var(--accent-orange); }
+        .style-dob .icon-box { color: var(--accent-orange); background: #fdf2e9; }
+
+        
+
+        /* Botón Volver */
+        .btn-back {
+            margin-top: 50px;
+            text-decoration: none;
+            color: #95a5a6;
+            border: 2px solid #bdc3c7;
+            padding: 10px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-back:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: white;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Matemáticas</h1>
+        <p class="subtitle">Selecciona una actividad para practicar</p>
+    </header>
+
+    <div class="grid-container">
+
+        <!-- CARPETA 1: División entre dos cifras -->
+        <a href="DOSENELDIVISOR/index.html" class="card style-div">
+            <div class="icon-box">➗</div>
+            <h2>División 2 Cifras</h2>
+            <span class="desc">Práctica de divisiones</span>
+            <div class="btn-enter">Entrar</div>
+        </a>
+
+        <!-- CARPETA 2: Doble y Mitad -->
+        <a href="MULTIPLICARPOR2CIFRAS/index.html" class="card style-dob">
+            <div class="icon-box">⚖️</div>
+            <h2>Multiplicar por 2 Cifras</h2>
+            <span class="desc">Multiplicar por 2</span>
+            <div class="btn-enter">Entrar</div>
+        </a>
+
+       
+
+    </div>
+
+    <!-- Botón Volver (Opcional, si tienes un menú superior) -->
+    <a href="../index.html" class="btn-back">⬅ Volver al Menú Principal</a>
+
+</body>
+</html>

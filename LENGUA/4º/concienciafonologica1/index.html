@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Ordenar Oraciones - Alumnado 3º Primaria</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Comic Neue', cursive;
+            background-color: #f8fafc;
+        }
+
+        .word-card {
+            cursor: grab;
+            transition: all 0.2s ease;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .word-card:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+
+        .pauta-line {
+            background-image: repeating-linear-gradient(#fff 0px, #fff 49px, #94a3b8 50px);
+            min-height: 140px;
+            border: 3px solid #cbd5e1;
+            border-radius: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            padding: 15px;
+            gap: 12px;
+        }
+
+        .dragging {
+            opacity: 0.4;
+            transform: scale(0.9);
+        }
+
+        .drop-zone-active {
+            background-color: #f1f5f9;
+            border-color: #3b82f6;
+        }
+
+        /* Colores específicos según categoría */
+        .cat-sustantivo { background-color: #8b5cf6; color: white; border-color: #7c3aed; }
+        .cat-verbo { background-color: #ef4444; color: white; border-color: #dc2626; }
+        .cat-adjetivo { background-color: #22c55e; color: white; border-color: #16a34a; }
+        .cat-adverbio { background-color: #78350f; color: white; border-color: #451a03; }
+        .cat-articulo { background-color: #fbbf24; color: black; border-color: #f59e0b; }
+        .cat-posesivo { background-color: #f97316; color: white; border-color: #ea580c; }
+        .cat-otro { background-color: #1f2937; color: white; border-color: #000000; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-indigo-100">
+        <!-- Encabezado con Leyenda Integrada -->
+        <div class="bg-indigo-600 p-4 md:p-6 text-white text-center">
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-1 italic">🧩 ¡Ordena y Aprende!</h1>
+            <p class="text-indigo-100 text-sm mb-4">¡Explora Asturias con tus compañeros!</p>
+            
+            <!-- Leyenda en el encabezado -->
+            <div class="bg-indigo-700/50 p-2 rounded-xl border border-indigo-400 inline-block mx-auto">
+                <div class="flex flex-wrap justify-center gap-2 text-[10px] md:text-[11px] uppercase tracking-wider font-bold">
+                    <span class="px-2 py-0.5 rounded-md cat-articulo shadow-sm">Artículos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-sustantivo shadow-sm text-white">Sustantivos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-verbo shadow-sm text-white">Verbos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-adjetivo shadow-sm text-white">Adjetivos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-adverbio shadow-sm text-white">Adverbios</span>
+                    <span class="px-2 py-0.5 rounded-md cat-posesivo shadow-sm text-white">Posesivos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-otro shadow-sm text-white">Otros</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-8">
+            
+            <!-- Ventana de palabras (Origen) -->
+            <div class="space-y-3">
+                <h2 class="text-xl font-bold text-gray-700 flex items-center">
+                    <span class="bg-yellow-400 text-white rounded-full w-9 h-9 flex items-center justify-center mr-3 shadow-sm">1</span>
+                    Palabras desordenadas:
+                </h2>
+                <div id="word-pool" class="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-8 min-h-[120px] flex flex-wrap justify-center gap-4">
+                    <!-- Palabras aquí -->
+                </div>
+            </div>
+
+            <!-- Pauta de escritura (Destino) -->
+            <div class="space-y-3">
+                <h2 class="text-xl font-bold text-gray-700 flex items-center">
+                    <span class="bg-green-500 text-white rounded-full w-9 h-9 flex items-center justify-center mr-3 shadow-sm">2</span>
+                    Construye la oración aquí:
+                </h2>
+                <div id="drop-zone" class="pauta-line shadow-inner transition-colors">
+                    <!-- Aquí caerán las palabras -->
+                </div>
+            </div>
+
+            <!-- Controles -->
+            <div class="flex flex-col items-center space-y-6">
+                <div id="feedback" class="text-2xl font-black min-h-[40px] text-center"></div>
+                
+                <div class="flex flex-wrap justify-center gap-4">
+                    <button onclick="checkSentence()" class="bg-green-500 hover:bg-green-600 text-white px-10 py-4 rounded-2xl font-black text-xl shadow-lg transform active:scale-95 transition-all">
+                        Comprobar ✅
+                    </button>
+                    <button onclick="resetGame()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-10 py-4 rounded-2xl font-black text-xl shadow-md transform active:scale-95 transition-all">
+                        Limpiar 🔄
+                    </button>
+                    <button onclick="nextSentence()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-xl shadow-lg transform active:scale-95 transition-all">
+                        Nueva Oración ➡
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Diccionario de categorías actualizado con NUEVOS NOMBRES
+        const wordColors = {
+            // Nombres nuevos (Sustantivos - Violeta)
+            "Enzo": "cat-sustantivo", "Bolaños": "cat-sustantivo", "Nerea": "cat-sustantivo", "Valle": "cat-sustantivo", 
+            "Diana": "cat-sustantivo", "Álvaro": "cat-sustantivo", "Cata": "cat-sustantivo", "Mauro": "cat-sustantivo", 
+            "Alba": "cat-sustantivo", "Martín": "cat-sustantivo", "Mateo": "cat-sustantivo", "Inés": "cat-sustantivo", 
+            "Xelaz": "cat-sustantivo", "Keisi": "cat-sustantivo", "Olivia": "cat-sustantivo", "Dani": "cat-sustantivo", 
+            "R": "cat-sustantivo", "Derek": "cat-sustantivo", "Diego": "cat-sustantivo",
+
+            // Lugares de Asturias (Sustantivos - Violeta)
+            "Candás": "cat-sustantivo", "Luanco": "cat-sustantivo", "Asturias": "cat-sustantivo", "Oviedo": "cat-sustantivo", 
+            "Perlora": "cat-sustantivo", "Antromero": "cat-sustantivo", "Xivares": "cat-sustantivo", "Xixón": "cat-sustantivo", 
+            "Playa": "cat-sustantivo", "Rebolleres": "cat-sustantivo", "mar": "cat-sustantivo",
+
+            // Verbos (Rojo)
+            "visitan": "cat-verbo", "van": "cat-verbo", "vive": "cat-verbo", "viajan": "cat-verbo", "caminan": "cat-verbo", 
+            "juegan": "cat-verbo", "ven": "cat-verbo", "pasean": "cat-verbo", "nadan": "cat-verbo", "corren": "cat-verbo", 
+            "están": "cat-verbo", "descansan": "cat-verbo", "exploran": "cat-verbo", "juega": "cat-verbo", "corre": "cat-verbo",
+
+            // Adjetivos (Verde)
+            "bonito": "cat-adjetivo", "grande": "cat-adjetivo", "azul": "cat-adjetivo", "fría": "cat-adjetivo",
+
+            // Adverbios (Marrón)
+            "muy": "cat-adverbio", "bien": "cat-adverbio", "hoy": "cat-adverbio", "aquí": "cat-adverbio",
+
+            // Artículos (Amarillo)
+            "El": "cat-articulo", "La": "cat-articulo", "Los": "cat-articulo", "Las": "cat-articulo", 
+            "un": "cat-articulo", "una": "cat-articulo", "al": "cat-articulo", "del": "cat-articulo",
+
+            // Posesivos (Naranja)
+            "Mi": "cat-posesivo", "Su": "cat-posesivo",
+
+            // Otros (Negro)
+            "y": "cat-otro", "en": "cat-otro", "por": "cat-otro", "a": "cat-otro", "e": "cat-otro", "de": "cat-otro"
+        };
+
+        // Oraciones actualizadas con los nuevos protagonistas
+        const sentences = [
+            "Enzo y Bolaños visitan Candás.",
+            "Nerea y Valle van a Luanco.",
+            "Diana vive en Asturias.",
+            "Álvaro y Cata viajan a Oviedo.",
+            "Mauro y Alba caminan por Perlora.",
+            "Martín y Mateo juegan en Antromero.",
+            "Inés y Xelaz ven el mar en Xivares.",
+            "Keisi y Olivia pasean por Xixón.",
+            "Dani R. y Derek nadan en la Playa de Rebolleres.",
+            "Diego corre por Asturias.",
+            "Enzo y Nerea están en Oviedo.",
+            "Bolaños y Valle descansan en Candás.",
+            "Diana y Álvaro exploran Luanco.",
+            "Cata juega en Xivares."
+        ];
+
+        let currentSentence = "";
+        let shuffledWords = [];
+
+        const wordPool = document.getElementById('word-pool');
+        const dropZone = document.getElementById('drop-zone');
+        const feedback = document.getElementById('feedback');
+
+        function initGame() {
+            const randomIndex = Math.floor(Math.random() * sentences.length);
+            currentSentence = sentences[randomIndex];
+            
+            const words = currentSentence.split(' ');
+            shuffledWords = [...words].sort(() => Math.random() - 0.5);
+
+            renderWords();
+            dropZone.innerHTML = '';
+            feedback.textContent = '';
+        }
+
+        function getCategoryClass(word) {
+            const clean = word.replace(/[.,]/g, "");
+            // Buscamos coincidencia exacta o con capitalización corregida
+            return wordColors[clean] || wordColors[clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase()] || "cat-otro";
+        }
+
+        function renderWords() {
+            wordPool.innerHTML = '';
+            shuffledWords.forEach((word, index) => {
+                const catClass = getCategoryClass(word);
+                const wordElement = document.createElement('div');
+                wordElement.className = `word-card ${catClass} px-5 py-3 rounded-xl border-b-4 shadow-md text-2xl font-extrabold`;
+                wordElement.textContent = word;
+                wordElement.draggable = true;
+                wordElement.id = `word-${index}-${Date.now()}`;
+                
+                wordElement.addEventListener('dragstart', handleDragStart);
+                wordElement.addEventListener('dragend', handleDragEnd);
+                
+                wordPool.appendChild(wordElement);
+            });
+        }
+
+        let draggedElement = null;
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', this.id);
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedElement = null;
+        }
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drop-zone-active');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drop-zone-active');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drop-zone-active');
+            
+            if (draggedElement) {
+                const afterElement = getDragAfterElement(dropZone, e.clientX);
+                if (afterElement == null) {
+                    dropZone.appendChild(draggedElement);
+                } else {
+                    dropZone.insertBefore(draggedElement, afterElement);
+                }
+            }
+        });
+
+        wordPool.addEventListener('dragover', (e) => e.preventDefault());
+        wordPool.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (draggedElement) {
+                wordPool.appendChild(draggedElement);
+            }
+        });
+
+        function getDragAfterElement(container, x) {
+            const draggableElements = [...container.querySelectorAll('.word-card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = x - box.left - box.width / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        function checkSentence() {
+            const userWords = [...dropZone.querySelectorAll('.word-card')].map(el => el.textContent);
+            const userSentence = userWords.join(' ');
+
+            if (userSentence === currentSentence) {
+                feedback.textContent = "¡FENOMENAL! 🌟 Has ordenado la frase perfectamente.";
+                feedback.className = "text-green-600 text-2xl font-black animate-bounce";
+            } else if (userWords.length === 0) {
+                feedback.textContent = "¡Mueve las palabras a la pauta! ✍️";
+                feedback.className = "text-amber-500 text-2xl font-black";
+            } else {
+                feedback.textContent = "¡Casi! Revisa el orden. Recuerda que el punto va al final. 🧐";
+                feedback.className = "text-red-500 text-2xl font-black";
+            }
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        function nextSentence() {
+            initGame();
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>

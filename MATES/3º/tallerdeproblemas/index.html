@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mates en Candás - Taller de Problemas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/open-dyslexic@1.1.0/font.min.css">
+    
+    <style>
+        :root {
+            --font-main: 'OpenDyslexic', sans-serif;
+            --font-math: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: #f0f9ff;
+            font-size: 1.4rem;
+            color: #334155;
+            background-image: radial-gradient(#e0f2fe 2px, transparent 2px);
+            background-size: 30px 30px;
+        }
+
+        .drag-item {
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            transition: all 0.2s;
+            border-width: 4px;
+            text-align: center;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-width: fit-content;
+        }
+
+        .drag-item:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            z-index: 100;
+        }
+
+        .drop-zone {
+            min-height: 180px;
+            border: 4px dashed #94a3b8;
+            border-radius: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .drop-zone.over {
+            background-color: #e0f2fe;
+            border-color: #0ea5e9;
+        }
+
+        /* --- ESTILOS PARA LA DIVISIÓN ESPAÑOLA --- */
+        .division-wrapper {
+            display: flex;
+            align-items: flex-start;
+            font-family: var(--font-math);
+            font-weight: 900;
+            font-size: 2rem;
+            line-height: 1.2;
+        }
+
+        .dividend-grid {
+            display: grid;
+            justify-items: center;
+            row-gap: 2px;
+        }
+
+        .div-digit {
+            padding: 0 4px;
+        }
+
+        .divisor-section {
+            margin-left: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .divisor-box {
+            border-left: 3px solid #000;
+            border-bottom: 3px solid #000;
+            padding: 0 10px;
+            margin-bottom: 2px;
+        }
+
+        .quotient-box {
+            padding-left: 10px;
+            letter-spacing: 2px;
+        }
+
+        /* --- ESTILOS GENERALES OPERACIONES --- */
+        .vertical-op {
+            font-family: var(--font-math);
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+            font-weight: 900;
+            font-size: 2.2rem;
+            padding: 10px;
+        }
+
+        .math-line {
+            border-bottom: 4px solid #000;
+            width: 100%;
+            text-align: right;
+            margin-bottom: 4px;
+        }
+
+        /* Colores de las tarjetas */
+        .item-data { border-color: #3b82f6; color: #1e40af; background-color: #eff6ff; }
+        .item-target { border-color: #ef4444; color: #991b1b; background-color: #fef2f2; }
+        .item-op { border-color: #64748b; color: #1e293b; background-color: #f8fafc; }
+        .item-sol { border-color: #22c55e; color: #166534; background-color: #f0fdf4; }
+        
+        /* Estilo para operación resuelta */
+        .op-revealed {
+            background-color: #dcfce7 !important; /* Verde claro */
+            border-color: #16a34a !important;
+            transition: background-color 0.5s ease;
+        }
+        
+        .op-hidden-result {
+            color: #fb923c; /* Naranja para el interrogante */
+        }
+
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="max-w-7xl mx-auto bg-white rounded-[2.5rem] shadow-2xl border-8 border-cyan-600 overflow-hidden">
+        <!-- Header -->
+        <header class="bg-cyan-600 p-3 text-white text-center shadow-lg relative overflow-hidden">
+            <h1 class="text-2xl md:text-3xl font-bold uppercase tracking-wide relative z-10">Taller de problemas del Poeta</h1>
+        </header>
+
+        <main class="p-6 md:p-8">
+            <!-- Panel del Problema -->
+            <div class="bg-amber-50 border-l-[12px] border-amber-400 p-6 md:p-8 rounded-3xl mb-10 shadow-sm relative">
+                <span class="absolute top-4 right-4 text-6xl opacity-20">⚓</span>
+                <h2 class="text-2xl font-bold text-amber-800 mb-3 uppercase tracking-wider">El Problema:</h2>
+                <p id="problem-text" class="text-3xl md:text-4xl leading-tight text-slate-800"></p>
+            </div>
+
+            <!-- Cajón de Piezas -->
+            <div class="mb-10">
+                <h3 class="text-lg font-bold text-slate-400 mb-4 uppercase tracking-widest text-center">Arrastra las piezas al lugar correcto</h3>
+                <div id="source-container" class="flex flex-wrap gap-4 p-6 bg-slate-50 rounded-[2rem] border-4 border-slate-200 min-h-[180px] items-center justify-center">
+                    <!-- Piezas generadas aquí -->
+                </div>
+            </div>
+
+            <!-- Tablero de Organización -->
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                <!-- Columna 1: Datos -->
+                <div class="xl:col-span-1 flex flex-col gap-6">
+                    <div>
+                        <span class="block text-blue-600 font-bold mb-2 ml-2">DATOS</span>
+                        <div class="drop-zone" data-type="data" id="zone-data"></div>
+                    </div>
+                    <div>
+                        <span class="block text-red-600 font-bold mb-2 ml-2">¿QUÉ BUSCAMOS?</span>
+                        <div class="drop-zone" data-type="target" id="zone-target"></div>
+                    </div>
+                </div>
+
+                <!-- Columna 2: Operaciones Indicadas -->
+                <div class="xl:col-span-1">
+                    <span class="block text-slate-500 font-bold mb-2 text-center">OPERACIONES INDICADAS</span>
+                    <div class="drop-zone" data-type="indicated" id="zone-indicated"></div>
+                </div>
+
+                <!-- Columna 3: Operaciones Realizadas (Ancha) -->
+                <div class="xl:col-span-2">
+                    <span class="block text-slate-500 font-bold mb-2 text-center">CÁLCULOS VERTICALES</span>
+                    <div class="drop-zone" data-type="vertical" id="zone-vertical"></div>
+                </div>
+            </div>
+
+            <!-- Fila Inferior: Solución -->
+            <div class="mt-8">
+                <span class="block text-green-600 font-bold mb-2 ml-2">SOLUCIÓN FINAL</span>
+                <div class="drop-zone w-full !items-start !justify-start !p-8" data-type="solution" id="zone-solution"></div>
+            </div>
+
+            <!-- Botonera -->
+            <div class="mt-12 flex flex-col sm:flex-row justify-center gap-6 pb-8">
+                <button id="btn-check" class="bg-green-500 hover:bg-green-600 text-white text-3xl font-bold py-5 px-10 rounded-[2rem] shadow-xl transition-transform active:scale-95 flex items-center gap-3 justify-center">
+                    <span>✅</span> Comprobar
+                </button>
+                <button id="btn-new" class="bg-cyan-500 hover:bg-cyan-600 text-white text-3xl font-bold py-5 px-10 rounded-[2rem] shadow-xl transition-transform active:scale-95 flex items-center gap-3 justify-center">
+                    <span>🔄</span> Nuevo Problema
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Feedback -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/90 hidden flex items-center justify-center p-4 z-[200]">
+        <div class="bg-white rounded-[3rem] p-10 max-w-xl w-full text-center border-[10px] border-cyan-300 relative">
+            <div id="modal-icon" class="text-8xl mb-4"></div>
+            <h2 id="modal-title" class="text-4xl font-bold mb-4 text-slate-800"></h2>
+            <p id="modal-desc" class="text-2xl text-slate-600 mb-8 leading-relaxed"></p>
+            <button onclick="closeModal()" class="bg-cyan-600 hover:bg-cyan-700 text-white text-2xl font-bold py-4 px-12 rounded-2xl w-full shadow-lg transition-colors">
+                Continuar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // LISTA DE PROTAGONISTAS ACTUALIZADA
+        const protagonists = [
+            "Enzo", "Bolaños", "Nerea", "Valle", "Diana", "Álvaro", 
+            "Cata", "Mauro", "Alba", "Martín", "Mateo", "Inés", 
+            "Xelaz", "Keisi", "Olivia", "Dani R.", "Derek", "Diego"
+        ];
+        
+        // Utilidades Matemáticas
+        const getRandom = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
+        const getProtagonist = () => protagonists[Math.floor(Math.random() * protagonists.length)];
+
+        // --- Generador de la División Paso a Paso (Algoritmo Español) ---
+        // Modificado para soportar estado resuelto/no resuelto
+        function renderDivision(dividend, divisor, isSolved) {
+            const divStr = dividend.toString();
+            const digits = divStr.split('').map(Number);
+            const gridCols = digits.length;
+            
+            // Si NO está resuelta, mostramos solo la estructura básica
+            if (!isSolved) {
+                 const headerRow = digits.map(d => `<div class="div-digit">${d}</div>`).join('');
+                 // Filas vacías para mantener estructura si quieres, o simplemente nada.
+                 // Ponemos un ? en el cociente
+                 return `
+                    <div class="division-wrapper">
+                        <div class="dividend-grid" style="grid-template-columns: repeat(${gridCols}, 1fr);">
+                            ${headerRow}
+                        </div>
+                        <div class="divisor-section">
+                            <div class="divisor-box">${divisor}</div>
+                            <div class="quotient-box op-hidden-result">?</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Si ESTÁ resuelta, calculamos todo
+            let quotientStr = "";
+            let rows = [];
+
+            let headerRow = digits.map(d => `<div class="div-digit">${d}</div>`).join('');
+
+            let currentVal = 0;
+            let i = 0;
+
+            while (i < digits.length) {
+                currentVal = (currentVal * 10) + digits[i];
+                
+                if (currentVal < divisor && i < digits.length - 1 && quotientStr === "") {
+                    i++;
+                    currentVal = (currentVal * 10) + digits[i];
+                }
+
+                let q = Math.floor(currentVal / divisor);
+                let r = currentVal % divisor;
+                
+                quotientStr += q;
+
+                if (i < digits.length - 1) {
+                   let rowContent = "";
+                   for(let k=0; k<gridCols; k++) {
+                       if(k === i) {
+                           rowContent += `<div class="div-digit font-bold text-blue-600">${r}</div>`;
+                       } else if (k === i + 1) {
+                           rowContent += `<div class="div-digit">${digits[k]}</div>`;
+                       } else {
+                           rowContent += `<div></div>`;
+                       }
+                   }
+                   rows.push(rowContent);
+                   currentVal = r;
+                } else {
+                    let rowContent = "";
+                    for(let k=0; k<gridCols; k++) {
+                       if(k === i) {
+                           rowContent += `<div class="div-digit font-bold text-green-600 border-t-2 border-black border-double pt-1">${r}</div>`;
+                       } else {
+                           rowContent += `<div></div>`;
+                       }
+                   }
+                   rows.push(rowContent);
+                }
+                i++;
+            }
+
+            return `
+                <div class="division-wrapper">
+                    <div class="dividend-grid" style="grid-template-columns: repeat(${gridCols}, 1fr);">
+                        ${headerRow}
+                        ${rows.join('')}
+                    </div>
+                    <div class="divisor-section">
+                        <div class="divisor-box">${divisor}</div>
+                        <div class="quotient-box text-blue-800">${quotientStr}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Modificado para aceptar parámetro isSolved
+        function createVerticalOp(a, b, op, res, isSolved) {
+            if (op === ':') return renderDivision(a, b, isSolved);
+            
+            const top = Math.max(a, b);
+            const bottom = Math.min(a, b);
+            const symbol = op === '*' ? 'x' : op;
+            
+            // Resultado visible o ?
+            const resultDisplay = isSolved 
+                ? `<div class="text-blue-800">${res}</div>` 
+                : `<div class="op-hidden-result">?</div>`;
+
+            return `
+                <div class="vertical-op">
+                    <div>${top}</div>
+                    <div class="math-line">${symbol} ${bottom}</div>
+                    ${resultDisplay}
+                </div>
+            `;
+        }
+
+        // --- Generador de Problemas Contextualizados en Candás ---
+        function generateProblem() {
+            // Seleccionamos aleatoriamente uno de los 5 escenarios/plantillas
+            const scenarioType = getRandom(1, 5);
+            const name1 = getProtagonist();
+            const name2 = getProtagonist();
+            let p = {};
+
+            switch(scenarioType) {
+                case 1: 
+                    // ESCENARIO: LA RULA / PESCA (División + Suma)
+                    const divisor = getRandom(4, 9);
+                    const quotient = getRandom(25, 60);
+                    const dividend = divisor * quotient;
+                    const extra = getRandom(10, 30);
+                    const final = quotient + extra;
+
+                    p = {
+                        text: `En la **Rula del Muelle de Candás**, han descargado ${dividend} kilos de bonito. ${name1} los reparte en partes iguales en ${divisor} contenedores grandes. Si ${name2} trae otro contenedor con ${extra} kilos más, ¿cuántos kilos habrá en ese último contenedor en total?`,
+                        data: [`Total: ${dividend} kg bonito`, `Contenedores: ${divisor}`, `Extra: ${extra} kg`],
+                        target: "¿Kilos en el último contenedor?",
+                        // Modificado: Ahora indicated contiene objetos con unsolved y solved
+                        indicated: [
+                            { unsolved: `${dividend} : ${divisor} = <span class="text-orange-500 font-bold">?</span>`, solved: `${dividend} : ${divisor} = **${quotient} kg**` },
+                            { unsolved: `${quotient} + ${extra} = <span class="text-orange-500 font-bold">?</span>`, solved: `${quotient} + ${extra} = **${final} kg**` }
+                        ],
+                        verticals: [[dividend, divisor, ':', quotient], [quotient, extra, '+', final]],
+                        solution: `El último contenedor tendrá ${final} kilos de bonito.`
+                    };
+                    break;
+
+                case 2:
+                    // ESCENARIO: COMPRAS EN ALIMERKA / KIOSKO BOCATA (Multiplicación + Resta)
+                    const packs = getRandom(12, 25);
+                    const units = getRandom(3, 8); 
+                    const total = packs * units;
+                    const paid = Math.ceil((total + 10) / 10) * 10; 
+                    const lost = getRandom(15, total - 10);
+                    const remaining = total - lost;
+
+                    if(Math.random() > 0.5) {
+                        p = {
+                            text: `${name1} ha ido al **Kiosko Bocata** y ha comprado ${packs} sobres de cromos. Cada sobre trae ${units} cromos. Si abre todos y le regala ${lost} cromos repetidos a ${name2} en la **Plaza de la Baragaña**, ¿cuántos cromos le quedan?`,
+                            data: [`Compró: ${packs} sobres`, `Sobre: ${units} cromos`, `Regaló: ${lost} cromos`],
+                            target: "¿Cuántos cromos le quedan?",
+                            indicated: [
+                                { unsolved: `${packs} x ${units} = <span class="text-orange-500 font-bold">?</span>`, solved: `${packs} x ${units} = **${total} cromos**` },
+                                { unsolved: `${total} - ${lost} = <span class="text-orange-500 font-bold">?</span>`, solved: `${total} - ${lost} = **${remaining} cromos**` }
+                            ],
+                            verticals: [[packs, units, '*', total], [total, lost, '-', remaining]],
+                            solution: `A ${name1} le quedan ${remaining} cromos.`
+                        };
+                    } else {
+                        p = {
+                            text: `En el **Alimerka**, ${name1} compra ${packs} mallas de naranjas para el colegio. Cada malla cuesta ${units} euros. Si paga con un billete de ${paid} euros, ¿cuánto dinero le devolverán?`,
+                            data: [`Compra: ${packs} mallas`, `Precio: ${units} €/malla`, `Paga con: ${paid} €`],
+                            target: "¿Cuánto le devuelven?",
+                            indicated: [
+                                { unsolved: `${packs} x ${units} = <span class="text-orange-500 font-bold">?</span>`, solved: `${packs} x ${units} = **${total} €**` },
+                                { unsolved: `${paid} - ${total} = <span class="text-orange-500 font-bold">?</span>`, solved: `${paid} - ${total} = **${paid - total} €**` }
+                            ],
+                            verticals: [[packs, units, '*', total], [paid, total, '-', paid - total]],
+                            solution: `Le tienen que devolver ${paid - total} euros.`
+                        };
+                    }
+                    break;
+
+                case 3:
+                    // ESCENARIO: CULTURA (TEATRO PRENDES / BIBLIOTECA)
+                    const cap1 = getRandom(150, 300);
+                    const cap2 = getRandom(100, 200);
+                    const sum = cap1 + cap2;
+                    const occupied = getRandom(100, sum - 50);
+                    const empty = sum - occupied;
+
+                    if(Math.random() > 0.5) {
+                        p = {
+                            text: `En el **Teatro Prendes** hay dos zonas. En la platea caben ${cap1} personas y en el anfiteatro ${cap2}. Si para la función de hoy han venido ${occupied} vecinos de **Candás**, ¿cuántas butacas han quedado vacías?`,
+                            data: [`Platea: ${cap1} sitios`, `Anfiteatro: ${cap2} sitios`, `Público: ${occupied}`],
+                            target: "¿Cuántas butacas vacías?",
+                            indicated: [
+                                { unsolved: `${cap1} + ${cap2} = <span class="text-orange-500 font-bold">?</span>`, solved: `${cap1} + ${cap2} = **${sum} sitios**` },
+                                { unsolved: `${sum} - ${occupied} = <span class="text-orange-500 font-bold">?</span>`, solved: `${sum} - ${occupied} = **${empty} sitios**` }
+                            ],
+                            verticals: [[cap1, cap2, '+', sum], [sum, occupied, '-', empty]],
+                            solution: `Han quedado vacías ${empty} butacas en el teatro.`
+                        };
+                    } else {
+                        p = {
+                            text: `La **Biblioteca de Candás** ha recibido una donación de libros. ${name1} trajo ${cap1} libros y ${name2} trajo ${cap2}. La bibliotecaria ya ha colocado ${occupied} en las estanterías. ¿Cuántos libros faltan por colocar?`,
+                            data: [`${name1}: ${cap1} libros`, `${name2}: ${cap2} libros`, `Colocados: ${occupied}`],
+                            target: "¿Libros sin colocar?",
+                            indicated: [
+                                { unsolved: `${cap1} + ${cap2} = <span class="text-orange-500 font-bold">?</span>`, solved: `${cap1} + ${cap2} = **${sum} libros**` },
+                                { unsolved: `${sum} - ${occupied} = <span class="text-orange-500 font-bold">?</span>`, solved: `${sum} - ${occupied} = **${empty} libros**` }
+                            ],
+                            verticals: [[cap1, cap2, '+', sum], [sum, occupied, '-', empty]],
+                            solution: `Faltan por colocar ${empty} libros.`
+                        };
+                    }
+                    break;
+
+                case 4:
+                    // ESCENARIO: EXCURSIONES
+                    const groups = getRandom(6, 12);
+                    const perGroup = getRandom(15, 30);
+                    const product = groups * perGroup;
+                    const others = getRandom(20, 50);
+                    const totalPeople = product + others;
+
+                    p = {
+                        text: `El **Colegio Poeta Antón** organiza una excursión a **Perlora**. Van ${groups} clases con ${perGroup} alumnos en cada clase. Allí se encuentran con otro grupo de **Xivares** de ${others} niños. ¿Cuántos niños hay en total en la ciudad de vacaciones?`,
+                        data: [`Clases: ${groups}`, `Alumnos/clase: ${perGroup}`, `Grupo Xivares: ${others}`],
+                        target: "¿Cuántos niños en total?",
+                        indicated: [
+                            { unsolved: `${groups} x ${perGroup} = <span class="text-orange-500 font-bold">?</span>`, solved: `${groups} x ${perGroup} = **${product} niños**` },
+                            { unsolved: `${product} + ${others} = <span class="text-orange-500 font-bold">?</span>`, solved: `${product} + ${others} = **${totalPeople} niños**` }
+                        ],
+                        verticals: [[groups, perGroup, '*', product], [product, others, '+', totalPeople]],
+                        solution: `Hay un total de ${totalPeople} niños en Perlora.`
+                    };
+                    break;
+
+                case 5:
+                    // ESCENARIO: OCIO Y NATURALEZA
+                    const totalItems = getRandom(100, 300);
+                    const removed = getRandom(20, 80);
+                    const remainingItems = totalItems - removed;
+                    const divisorBags = getRandom(3, 8);
+                    const adjustedRemaining = remainingItems - (remainingItems % divisorBags);
+                    const adjustedTotal = adjustedRemaining + removed;
+                    const resultPerBag = adjustedRemaining / divisorBags;
+
+                    if (Math.random() > 0.5) {
+                        p = {
+                            text: `En una de las **Sidrerías de Candás**, tenían ${adjustedTotal} vasos de sidra limpios. Se han roto ${removed} durante el fin de semana. Los vasos que quedan sanos los guardan en ${divisorBags} cajas iguales. ¿Cuántos vasos meten en cada caja?`,
+                            data: [`Tenían: ${adjustedTotal} vasos`, `Rotos: ${removed} vasos`, `Cajas: ${divisorBags}`],
+                            target: "¿Vasos por caja?",
+                            indicated: [
+                                { unsolved: `${adjustedTotal} - ${removed} = <span class="text-orange-500 font-bold">?</span>`, solved: `${adjustedTotal} - ${removed} = **${adjustedRemaining} vasos**` },
+                                { unsolved: `${adjustedRemaining} : ${divisorBags} = <span class="text-orange-500 font-bold">?</span>`, solved: `${adjustedRemaining} : ${divisorBags} = **${resultPerBag} vasos**` }
+                            ],
+                            verticals: [[adjustedTotal, removed, '-', adjustedRemaining], [adjustedRemaining, divisorBags, ':', resultPerBag]],
+                            solution: `Meten ${resultPerBag} vasos en cada caja.`
+                        };
+                    } else {
+                        p = {
+                            text: `En la **Playa de Rebolleres**, ${name1} y ${name2} recogieron ${adjustedTotal} conchas. Al llegar a casa vieron que ${removed} estaban rotas y las tiraron. Las conchas bonitas las usaron para decorar ${divisorBags} marcos de fotos, poniendo la misma cantidad en cada uno. ¿Cuántas conchas pusieron en cada marco?`,
+                            data: [`Total: ${adjustedTotal} conchas`, `Rotas: ${removed}`, `Marcos: ${divisorBags}`],
+                            target: "¿Conchas por marco?",
+                            indicated: [
+                                { unsolved: `${adjustedTotal} - ${removed} = <span class="text-orange-500 font-bold">?</span>`, solved: `${adjustedTotal} - ${removed} = **${adjustedRemaining} conchas**` },
+                                { unsolved: `${adjustedRemaining} : ${divisorBags} = <span class="text-orange-500 font-bold">?</span>`, solved: `${adjustedRemaining} : ${divisorBags} = **${resultPerBag} conchas**` }
+                            ],
+                            verticals: [[adjustedTotal, removed, '-', adjustedRemaining], [adjustedRemaining, divisorBags, ':', resultPerBag]],
+                            solution: `Pusieron ${resultPerBag} conchas en cada marco.`
+                        };
+                    }
+                    break;
+            }
+            return p;
+        }
+
+        // --- Renderizado y Lógica UI ---
+        function render() {
+            const prob = generateProblem();
+            
+            // Animación simple de texto
+            const pText = document.getElementById('problem-text');
+            pText.style.opacity = '0';
+            setTimeout(() => {
+                pText.innerHTML = prob.text.replace(/\*\*(.*?)\*\*/g, '<span class="text-cyan-700 font-bold bg-cyan-100 px-1 rounded">$1</span>');
+                pText.style.opacity = '1';
+                pText.style.transition = 'opacity 0.5s';
+            }, 200);
+            
+            const source = document.getElementById('source-container');
+            source.innerHTML = '';
+            document.querySelectorAll('.drop-zone').forEach(z => z.innerHTML = '');
+
+            let items = [];
+
+            // Datos
+            prob.data.forEach(d => items.push({ type: 'data', html: d, css: 'item-data' }));
+            // Objetivo
+            items.push({ type: 'target', html: prob.target, css: 'item-target font-bold' });
+            
+            // Indicadas (Ahora usamos el objeto con unsolved/solved y añadimos un ID de enlace)
+            prob.indicated.forEach((indObj, index) => {
+                // Al inicio mostramos unsolved
+                const html = indObj.unsolved;
+                const solvedHtml = indObj.solved.replace(/\*\*(.*?)\*\*/g, '<span class="border-b-2 border-black font-black mx-1">$1</span>');
+                const unsolvedHtml = indObj.unsolved;
+                
+                items.push({ 
+                    type: 'indicated', 
+                    html: html, 
+                    css: 'item-op',
+                    idLink: index, // Vinculo con la vertical
+                    solvedData: solvedHtml,
+                    unsolvedData: unsolvedHtml
+                });
+            });
+
+            // Verticales
+            prob.verticals.forEach((v, index) => {
+                // Generamos versiones RESUELTA y NO RESUELTA para la vertical
+                const htmlSolved = createVerticalOp(v[0], v[1], v[2], v[3], true);
+                const htmlUnsolved = createVerticalOp(v[0], v[1], v[2], v[3], false);
+
+                items.push({ 
+                    type: 'vertical', 
+                    html: htmlUnsolved, // Inicialmente NO resuelta
+                    css: 'item-op !p-2',
+                    idLink: index, // Vinculo con la indicada
+                    solvedData: htmlSolved,
+                    unsolvedData: htmlUnsolved
+                });
+            });
+
+            // Solución
+            items.push({ type: 'solution', html: prob.solution, css: 'item-sol font-bold w-full text-left text-2xl' });
+
+            // Mezclar y pintar
+            shuffle(items).forEach((item, idx) => {
+                const div = document.createElement('div');
+                div.id = `piece-${idx}`;
+                div.draggable = true;
+                div.className = `drag-item p-4 rounded-xl ${item.css}`;
+                div.dataset.type = item.type;
+                
+                // Si tienen vinculos los guardamos en el dataset
+                if (item.idLink !== undefined) {
+                    div.dataset.linkId = item.idLink;
+                }
+                if (item.solvedData) {
+                    div.dataset.solved = item.solvedData;
+                    div.dataset.unsolved = item.unsolvedData;
+                }
+
+                div.innerHTML = item.html;
+                
+                div.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text', e.target.id);
+                    e.target.classList.add('opacity-50');
+                    e.target.style.transform = "scale(0.9)";
+                });
+                div.addEventListener('dragend', e => {
+                    e.target.classList.remove('opacity-50');
+                    e.target.style.transform = "scale(1)";
+                });
+                
+                source.appendChild(div);
+            });
+        }
+
+        // --- Lógica para revelar resultados de verticales y operaciones indicadas ---
+        function updateAllVisuals() {
+            const verticalItems = document.querySelectorAll('.drag-item[data-type="vertical"]');
+            
+            // 1. Actualizar apariencia de las OPERACIONES VERTICALES
+            verticalItems.forEach(item => {
+                const parent = item.parentElement;
+                // Si está en la zona correcta (Cálculos Verticales)
+                if (parent && parent.id === 'zone-vertical') {
+                    if (item.innerHTML !== item.dataset.solved) {
+                        item.innerHTML = item.dataset.solved;
+                        item.classList.add('op-revealed');
+                        // Pequeña animación
+                        item.style.animation = "none";
+                        item.offsetHeight; /* trigger reflow */
+                        item.style.animation = "pop 0.3s ease";
+                    }
+                } else {
+                    // Si NO está en la zona (está en el origen u otro lado), volver a ocultar
+                    if (item.innerHTML !== item.dataset.unsolved) {
+                        item.innerHTML = item.dataset.unsolved;
+                        item.classList.remove('op-revealed');
+                    }
+                }
+            });
+
+            // 2. Actualizar apariencia de las OPERACIONES INDICADAS (según si su vertical está puesta)
+            // Obtenemos los IDs de los cálculos resueltos (solo los que están en zone-vertical)
+            const placedVerticalIds = Array.from(document.querySelectorAll('#zone-vertical .drag-item[data-type="vertical"]'))
+                                           .map(el => el.dataset.linkId);
+
+            const indicatedItems = document.querySelectorAll('.drag-item[data-type="indicated"]');
+            
+            indicatedItems.forEach(item => {
+                const linkId = item.dataset.linkId;
+                if (placedVerticalIds.includes(linkId)) {
+                    // Si el cálculo vertical correspondiente está puesto, revelamos la indicada
+                    if (item.innerHTML !== item.dataset.solved) {
+                         item.innerHTML = item.dataset.solved;
+                         item.classList.add('op-revealed');
+                         item.style.animation = "none";
+                         item.offsetHeight; 
+                         item.style.animation = "pop 0.3s ease";
+                    }
+                } else {
+                    // Si no, la ocultamos
+                    if (item.innerHTML !== item.dataset.unsolved) {
+                        item.innerHTML = item.dataset.unsolved;
+                        item.classList.remove('op-revealed');
+                    }
+                }
+            });
+        }
+
+        // Drag & Drop Listeners
+        const zones = document.querySelectorAll('.drop-zone, #source-container');
+        zones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault();
+                if (zone.classList.contains('drop-zone')) {
+                    zone.classList.add('over');
+                    e.dataTransfer.dropEffect = "move";
+                }
+            });
+            zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('over');
+                const id = e.dataTransfer.getData('text');
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.animation = "pop 0.3s ease";
+                    zone.appendChild(el);
+                    // Actualizamos estados visuales al soltar
+                    updateAllVisuals();
+                }
+            });
+        });
+
+        // Add keyframes for drop animation
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = `
+            @keyframes pop {
+                0% { transform: scale(0.8); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+        // Validación
+        function check() {
+            const types = ['data', 'target', 'indicated', 'vertical', 'solution'];
+            let allGood = true;
+            let incomplete = false;
+
+            types.forEach(t => {
+                const z = document.getElementById(`zone-${t}`);
+                const children = z.querySelectorAll('.drag-item');
+                if (children.length === 0) incomplete = true;
+                children.forEach(c => {
+                    if (c.dataset.type !== t) allGood = false;
+                });
+            });
+
+            if (incomplete) showModal('🧩', 'Faltan Piezas', '¡No te rindas! Coloca todas las piezas del cajón en su sitio.');
+            else if (!allGood) showModal('🧐', 'Revisa bien', 'Algunas piezas no están en su casa. Fíjate en los colores de los bordes.');
+            else showModal('🎉', '¡Enhorabuena!', '¡Has resuelto el problema de Candás perfectamente!');
+        }
+
+        function showModal(icon, title, desc) {
+            const m = document.getElementById('modal');
+            document.getElementById('modal-icon').innerText = icon;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-desc').innerText = desc;
+            m.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        document.getElementById('btn-new').addEventListener('click', render);
+        document.getElementById('btn-check').addEventListener('click', check);
+
+        // Iniciar
+        window.onload = render;
+    </script>
+</body>
+</html>

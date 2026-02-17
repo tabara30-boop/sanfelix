@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Separar Palabras - 3º Primaria</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Comic Neue', cursive;
+            background-color: #f0f4f8;
+        }
+
+        .letter-tile {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 50px;
+            background: white;
+            border: 2px solid #cbd5e1;
+            margin: 0 1px;
+            font-size: 1.875rem; /* text-3xl */
+            font-weight: 800;    /* font-extrabold */
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .letter-tile:hover {
+            background-color: #e2e8f0;
+            border-color: #94a3b8;
+            transform: translateY(-2px);
+        }
+
+        /* Marcador de separación al pasar el ratón entre letras */
+        .split-gap {
+            width: 8px;
+            height: 50px;
+            display: inline-block;
+            cursor: pointer;
+            background-color: transparent;
+            transition: background-color 0.2s;
+            position: relative;
+        }
+
+        .split-gap:hover {
+            background-color: #ef4444;
+        }
+
+        .split-gap:hover::after {
+            content: '✂️';
+            position: absolute;
+            top: -25px;
+            left: -8px;
+            font-size: 14px;
+        }
+
+        .pauta-line {
+            background-image: repeating-linear-gradient(#fff 0px, #fff 59px, #94a3b8 60px);
+            min-height: 160px;
+            border: 3px solid #cbd5e1;
+            border-radius: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            padding: 20px;
+            gap: 15px;
+        }
+
+        /* Colores gramaticales */
+        .cat-sustantivo { background-color: #8b5cf6; color: white; border-color: #7c3aed; }
+        .cat-verbo { background-color: #ef4444; color: white; border-color: #dc2626; }
+        .cat-adjetivo { background-color: #22c55e; color: white; border-color: #16a34a; }
+        .cat-adverbio { background-color: #78350f; color: white; border-color: #451a03; }
+        .cat-articulo { background-color: #fbbf24; color: black; border-color: #f59e0b; }
+        .cat-posesivo { background-color: #f97316; color: white; border-color: #ea580c; }
+        .cat-otro { background-color: #1f2937; color: white; border-color: #000000; }
+
+        .word-tag {
+            padding: 8px 16px;
+            border-radius: 12px;
+            border-bottom-width: 4px;
+            font-size: 1.875rem; /* text-3xl */
+            font-weight: 800;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-indigo-100">
+        <!-- Encabezado con Leyenda -->
+        <div class="bg-indigo-600 p-6 text-white text-center">
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-1 italic text-yellow-300">✂️ ¡Separa las Palabras!</h1>
+            <p class="text-indigo-100 text-sm mb-4">Haz clic entre las letras para separar la primera palabra de la fila.</p>
+            
+            <div class="bg-indigo-700/50 p-2 rounded-xl border border-indigo-400 inline-block mx-auto">
+                <div class="flex flex-wrap justify-center gap-2 text-[10px] md:text-[11px] uppercase tracking-wider font-bold">
+                    <span class="px-2 py-0.5 rounded-md cat-articulo shadow-sm">Artículos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-sustantivo shadow-sm text-white">Sustantivos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-verbo shadow-sm text-white">Verbos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-adjetivo shadow-sm text-white">Adjetivos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-adverbio shadow-sm text-white">Adverbios</span>
+                    <span class="px-2 py-0.5 rounded-md cat-posesivo shadow-sm text-white">Posesivos</span>
+                    <span class="px-2 py-0.5 rounded-md cat-otro shadow-sm text-white">Otros</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-8">
+            
+            <!-- Oración compacta (Snake) -->
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold text-gray-700 flex items-center">
+                    <span class="bg-yellow-400 text-white rounded-full w-9 h-9 flex items-center justify-center mr-3 shadow-sm italic">?</span>
+                    Oración toda junta:
+                </h2>
+                <div id="sentence-snake" class="bg-slate-800 p-8 rounded-2xl flex flex-wrap justify-center items-center shadow-inner overflow-x-auto">
+                    <!-- Las letras aparecerán aquí -->
+                </div>
+            </div>
+
+            <!-- Pauta de escritura -->
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold text-gray-700 flex items-center">
+                    <span class="bg-green-500 text-white rounded-full w-9 h-9 flex items-center justify-center mr-3 shadow-sm">✓</span>
+                    Palabras separadas:
+                </h2>
+                <div id="pauta" class="pauta-line shadow-inner">
+                    <!-- Aquí aparecerán las palabras con sus colores -->
+                </div>
+            </div>
+
+            <!-- Controles y Feedback -->
+            <div class="flex flex-col items-center space-y-6">
+                <div id="feedback" class="text-2xl font-black min-h-[40px] text-center"></div>
+                
+                <div class="flex flex-wrap justify-center gap-4">
+                    <button onclick="resetGame()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-10 py-4 rounded-2xl font-black text-xl shadow-md transition-all">
+                        Reiniciar 🔄
+                    </button>
+                    <button onclick="nextSentence()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-xl shadow-lg transition-all">
+                        Siguiente Frase ➡
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const wordColors = {
+            // Nombres NUEVOS (Sustantivos)
+            "Enzo": "cat-sustantivo", "Bolaños": "cat-sustantivo", "Nerea": "cat-sustantivo", "Valle": "cat-sustantivo", 
+            "Diana": "cat-sustantivo", "Álvaro": "cat-sustantivo", "Cata": "cat-sustantivo", "Mauro": "cat-sustantivo", 
+            "Alba": "cat-sustantivo", "Martín": "cat-sustantivo", "Mateo": "cat-sustantivo", "Inés": "cat-sustantivo", 
+            "Xelaz": "cat-sustantivo", "Keisi": "cat-sustantivo", "Olivia": "cat-sustantivo", "Dani": "cat-sustantivo", 
+            "R": "cat-sustantivo", "Derek": "cat-sustantivo", "Diego": "cat-sustantivo",
+
+            // Lugares de Asturias
+            "Candás": "cat-sustantivo", "Luanco": "cat-sustantivo", "Asturias": "cat-sustantivo", "Oviedo": "cat-sustantivo", 
+            "Perlora": "cat-sustantivo", "Antromero": "cat-sustantivo", "Xivares": "cat-sustantivo", "Xixón": "cat-sustantivo", 
+            "Playa": "cat-sustantivo", "Rebolleres": "cat-sustantivo", "mar": "cat-sustantivo",
+            
+            // Verbos
+            "visitan": "cat-verbo", "van": "cat-verbo", "vive": "cat-verbo", "viajan": "cat-verbo", "caminan": "cat-verbo", 
+            "juegan": "cat-verbo", "ven": "cat-verbo", "pasean": "cat-verbo", "nadan": "cat-verbo", "corren": "cat-verbo", 
+            "están": "cat-verbo", "descansan": "cat-verbo", "exploran": "cat-verbo",
+            
+            // Artículos
+            "El": "cat-articulo", "La": "cat-articulo", "Los": "cat-articulo", "Las": "cat-articulo", 
+            "un": "cat-articulo", "una": "cat-articulo", "al": "cat-articulo", "del": "cat-articulo",
+            
+            // Otros
+            "y": "cat-otro", "en": "cat-otro", "por": "cat-otro", "a": "cat-otro", "e": "cat-otro", "de": "cat-otro"
+        };
+
+        const sentences = [
+            "Enzo y Bolaños visitan Candás.",
+            "Nerea y Valle van a Luanco.",
+            "Diana vive en Asturias.",
+            "Álvaro y Cata viajan a Oviedo.",
+            "Mauro y Alba caminan por Perlora.",
+            "Martín y Mateo juegan en Antromero.",
+            "Inés y Xelaz ven el mar en Xivares.",
+            "Keisi y Olivia pasean por Xixón.",
+            "Dani R. y Derek nadan en la Playa de Rebolleres.",
+            "Diego corre por Asturias.",
+            "Enzo y Nerea están en Oviedo.",
+            "Bolaños y Valle descansan en Candás."
+        ];
+
+        let originalWords = [];
+        let currentTargetWordIndex = 0;
+        let joinedString = "";
+        let currentProgress = "";
+
+        const snakeContainer = document.getElementById('sentence-snake');
+        const pautaContainer = document.getElementById('pauta');
+        const feedback = document.getElementById('feedback');
+
+        function initGame() {
+            const randomIndex = Math.floor(Math.random() * sentences.length);
+            const sentence = sentences[randomIndex];
+            
+            // Guardar palabras originales (incluyendo el punto final en la última)
+            originalWords = sentence.split(' ');
+            currentTargetWordIndex = 0;
+            
+            // Crear el string unido (sin espacios)
+            joinedString = originalWords.join('');
+            currentProgress = joinedString;
+            
+            pautaContainer.innerHTML = '';
+            feedback.textContent = '';
+            renderSnake();
+        }
+
+        function renderSnake() {
+            snakeContainer.innerHTML = '';
+            
+            // Renderizar cada letra de lo que queda de oración
+            for (let i = 0; i < currentProgress.length; i++) {
+                const char = document.createElement('div');
+                char.className = 'letter-tile';
+                char.textContent = currentProgress[i];
+                snakeContainer.appendChild(char);
+
+                // Añadir un espacio para "cortar" después de esta letra (si no es la última letra total)
+                if (i < currentProgress.length - 1) {
+                    const gap = document.createElement('div');
+                    gap.className = 'split-gap';
+                    gap.onclick = () => attemptSplit(i + 1);
+                    snakeContainer.appendChild(gap);
+                } else {
+                    // Si es la última letra de la cadena restante, el clic en ella intenta cerrar la palabra
+                    char.onclick = () => attemptSplit(i + 1);
+                }
+            }
+            
+            if (currentProgress.length === 0) {
+                snakeContainer.innerHTML = '<div class="text-white text-2xl font-bold italic">¡Oración completada! ✨</div>';
+                feedback.textContent = "¡Increíble! Has separado todas las palabras. 🌟";
+                feedback.className = "text-green-600 text-2xl font-black animate-bounce";
+            }
+        }
+
+        function attemptSplit(charIndex) {
+            // La palabra que el niño intenta separar es desde el inicio hasta charIndex
+            const attempt = currentProgress.substring(0, charIndex);
+            const correctWord = originalWords[currentTargetWordIndex];
+
+            if (attempt === correctWord) {
+                // Éxito
+                addWordToPauta(correctWord);
+                currentProgress = currentProgress.substring(charIndex);
+                currentTargetWordIndex++;
+                feedback.textContent = "¡Bien hecho! ✅";
+                feedback.className = "text-blue-500 text-xl font-bold";
+                renderSnake();
+            } else {
+                // Error
+                feedback.textContent = "¡Ups! Esa no es una palabra completa. Intenta otra vez. 🔍";
+                feedback.className = "text-red-500 text-xl font-bold";
+            }
+        }
+
+        function addWordToPauta(word) {
+            const catClass = getCategoryClass(word);
+            const wordDiv = document.createElement('div');
+            wordDiv.className = `word-tag ${catClass}`;
+            wordDiv.textContent = word;
+            pautaContainer.appendChild(wordDiv);
+        }
+
+        function getCategoryClass(word) {
+            const clean = word.replace(/[.,]/g, "");
+            return wordColors[clean] || wordColors[clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase()] || "cat-otro";
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        function nextSentence() {
+            initGame();
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>

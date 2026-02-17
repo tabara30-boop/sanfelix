@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CAMBIO: Título de la pestaña -->
+    <title>Niveles - CP San Félix</title>
+    <style>
+        /* --- Configuración General --- */
+        :root {
+            --mar-profundo: #1e3c72;
+            --mar-claro: #2a5298;
+            --flor-rosa: #e91e63;
+            --flor-amarilla: #fbc02d;
+            --hoja-verde: #4caf50;
+            --arena: #fdfbf7;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background-color: var(--arena);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(30, 60, 114, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(233, 30, 99, 0.05) 0%, transparent 20%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- Perfil Pequeño (Superior Izquierda) --- */
+        .perfil-poeta {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .foto-marco {
+            width: 50px;
+            height: 50px;
+            overflow: hidden;
+            border-radius: 50%;
+            border: 2px solid var(--mar-profundo);
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+
+        .foto-poeta { width: 80%; height: 80%; object-fit: contain; }
+
+        .nombre-poeta {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--mar-profundo);
+            text-transform: uppercase;
+        }
+
+        /* --- Botón Volver --- */
+        .boton-volver {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--flor-rosa);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+            z-index: 100;
+        }
+        .boton-volver:hover { transform: scale(1.05); background: #c2185b; }
+
+        /* --- Rejilla del Menú --- */
+        .contenedor-menu {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            padding: 100px 20px 40px; 
+            max-width: 1000px;
+            width: 90%;
+        }
+
+        /* --- Estilo de los Botones --- */
+        .boton-poetico {
+            position: relative;
+            height: 180px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            overflow: hidden;
+            text-decoration: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .fondo-animado {
+            position: absolute;
+            top: 0; left: 0; width: 200%; height: 200%;
+            /* Estilo específico para esta sección (tonos verdes/tecnológicos/mates) */
+            background: linear-gradient(45deg, #009688, #4caf50, #8bc34a, #cddc39); 
+            background-size: 200% 200%;
+            z-index: 1;
+            animation: oleaje 8s ease infinite;
+            opacity: 0.9;
+        }
+
+        .texto-nivel {
+            position: relative;
+            z-index: 3;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-family: 'Segoe UI', sans-serif;
+            text-align: center;
+        }
+
+        .boton-poetico:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 30px rgba(0,0,0,0.25);
+        }
+
+        @keyframes oleaje {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(-25%, -25%); }
+            100% { transform: translate(0, 0); }
+        }
+
+        @media (max-width: 768px) {
+            .contenedor-menu { grid-template-columns: repeat(2, 1fr); padding-top: 120px; }
+        }
+        @media (max-width: 480px) {
+            .contenedor-menu { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Pequeño -->
+    <div class="perfil-poeta">
+        <div class="foto-marco">
+            <img src="https://cdn-icons-png.flaticon.com/512/2232/2232688.png" alt="Logo" class="foto-poeta">
+        </div>
+        <!-- CAMBIO: Nombre del colegio actualizado -->
+        <div class="nombre-poeta">CP SAN FÉLIX</div>
+    </div>
+
+    <!-- Botón Volver -->
+    <a href="../index.html" class="boton-volver">↩ Volver al inicio</a>
+
+    <!-- Menú de Niveles (1º a 6º) -->
+    <main class="contenedor-menu">
+        
+        <!-- Botón 1º Primaria -->
+        <a href="1º/index.html" class="boton-poetico">
+            <div class="fondo-animado"></div>
+            <span class="texto-nivel">1º PRIMARIA</span>
+        </a>
+
+        <!-- Botón 2º Primaria -->
+        <a href="2º/index.html" class="boton-poetico">
+            <div class="fondo-animado"></div>
+            <span class="texto-nivel">2º PRIMARIA</span>
+        </a>
+
+        <!-- Botón 3º Primaria -->
+        <a href="3º/index.html" class="boton-poetico">
+            <div class="fondo-animado"></div>
+            <span class="texto-nivel">3º PRIMARIA</span>
+        </a>
+
+        <!-- Botón 4º Primaria -->
+        <a href="4º/index.html" class="boton-poetico">
+            <div class="fondo-animado"></div>
+            <span class="texto-nivel">4º PRIMARIA</span>
+        </a>
+
+        <!-- Botón 5º Primaria -->
+        <a href="5º/index.html" class="boton-poetico">
+            <div class="fondo-animado"></div>
+            <span class="texto-nivel">5º PRIMARIA</span>
+        </a>
+
+        <!-- Botón 6º Primaria -->
+        <a href="6º/index.html" class="boton-poetico">
+            <div class="fondo-animado"></div>
+            <span class="texto-nivel">6º PRIMARIA</span>
+        </a>
+
+    </main>
+
+</body>
+</html>

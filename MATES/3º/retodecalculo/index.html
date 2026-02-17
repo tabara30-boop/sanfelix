@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ascenso Terrorífico</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fuentes Google: Creepster (Terror) y Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel para compilar JSX en el navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            overflow-x: hidden;
+            font-family: 'Roboto', sans-serif;
+        }
+        .font-creepster {
+            font-family: 'Creepster', cursive;
+        }
+        /* Utilidad para preservar estilo 3D */
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // --- CONFIGURACIÓN Y DATOS ---
+
+        // LISTA DE PROTAGONISTAS ACTUALIZADA
+        const PROTAGONISTAS = [
+            "Enzo", "Bolaños", "Nerea", "Valle", "Diana", "Álvaro", 
+            "Cata", "Mauro", "Alba", "Martín", "Mateo", "Inés", 
+            "Xelaz", "Keisi", "Olivia", "Dani R.", "Derek", "Diego"
+        ];
+
+        const AVATARES = [
+            "🧛", "🧟", "👻", "🦇", "🕷️", "💀", "🧙‍♀️", "👺", "👽", "🤖", "🤡", "👹"
+        ];
+
+        const PISOS = [
+            { nombre: "INFRAMUNDO", color: "#2d3436", texto: "#b2bec3" },     // Gris muy oscuro
+            { nombre: "TERROINFIERNO", color: "#636e72", texto: "#dfe6e9" },  // Gris oscuro
+            { nombre: "PAÍS DE LOS ORCOS", color: "#b2bec3", texto: "#2d3436" }, // Gris medio
+            { nombre: "ASOMO LA PATITA", color: "#dfe6e9", texto: "#2d3436" }, // Gris claro
+            { nombre: "EL CIELO EN LA TIERRA", color: "#f5f6fa", texto: "#2d3436" } // Blanco/Azulado
+        ];
+
+        const TOTAL_PISOS = 5;
+        const PREGUNTAS_POR_PISO = 5;
+
+        // --- UTILIDADES ---
+
+        const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const randomElem = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+        // Generador de Problemas
+        const generarProblema = (nivel, subnivel) => {
+            const protagonista = randomElem(PROTAGONISTAS);
+            const tipo = nivel === 0 ? 'serie' : 
+                        nivel === 1 ? randomElem(['suma', 'resta']) :
+                        nivel === 2 ? randomElem(['suma', 'resta', 'multi']) :
+                        randomElem(['suma', 'resta', 'multi', 'div']);
+            
+            // Lógica para aumentar dificultad según nivel
+            const dificultad = nivel + 1; 
+
+            let data = {};
+
+            if (tipo === 'serie') {
+                const length = 6 + nivel; // Series de 6 a 10 números
+                const step = randomInt(2, 5 + nivel); // Saltos de 2 en 2, 5 en 5, etc.
+                const direction = Math.random() > 0.5 ? 1 : -1; // 1: Ascendente, -1: Descendente
+                
+                let start;
+                if (direction === 1) {
+                    start = randomInt(2, 20 * dificultad);
+                } else {
+                    const minStart = (step * length) + 10;
+                    start = randomInt(minStart, minStart + (30 * dificultad));
+                }
+
+                const sequence = Array.from({length}, (_, i) => start + (i * step * direction));
+                
+                const hiddenIndices = [];
+                const numHidden = 2 + Math.floor(Math.random() * 2); 
+                
+                while(hiddenIndices.length < numHidden) {
+                    let idx = randomInt(1, length - 1); // Evitar ocultar el índice 0
+                    if(!hiddenIndices.includes(idx)) hiddenIndices.push(idx);
+                }
+                hiddenIndices.sort((a,b) => a - b);
+
+                data = { 
+                    sequence, 
+                    hiddenIndices, 
+                    enunciado: `Completa la serie numérica (${direction === 1 ? 'Ascendente' : 'Descendente'}) de ${protagonista}:` 
+                };
+            } else if (tipo === 'suma') {
+                const n1 = randomInt(100, 1000 * dificultad);
+                const n2 = randomInt(50, 900 * dificultad);
+                data = {
+                    n1, n2, operator: '+', result: n1 + n2,
+                    enunciado: `${protagonista} tiene ${n1} murciélagos y ${randomElem(PROTAGONISTAS)} le regala ${n2}. ¿Cuántos tiene ahora?`
+                };
+            } else if (tipo === 'resta') {
+                const n1 = randomInt(200, 1000 * dificultad);
+                const n2 = randomInt(50, n1 - 10);
+                data = {
+                    n1, n2, operator: '-', result: n1 - n2,
+                    enunciado: `${protagonista} cocinó ${n1} galletas de araña, pero se comió ${n2}. ¿Cuántas quedan?`
+                };
+            } else if (tipo === 'multi') {
+                const n1 = randomInt(20, 100 * (dificultad));
+                const n2 = randomInt(2, 9);
+                data = {
+                    n1, n2, operator: 'x', result: n1 * n2,
+                    enunciado: `${protagonista} ve ${n1} fantasmas en cada piso. Hay ${n2} pisos. ¿Cuántos fantasmas hay en total?`
+                };
+            } else if (tipo === 'div') {
+                const divisor = randomInt(2, 9);
+                const cociente = randomInt(10, 100 * dificultad); 
+                const dividendo = divisor * cociente + randomInt(0, divisor - 1); 
+                data = {
+                    n1: dividendo, n2: divisor, operator: ':', result: Math.floor(dividendo/divisor), resto: dividendo % divisor,
+                    enunciado: `${protagonista} reparte ${dividendo} huesos entre ${divisor} perros esqueleto. ¿Cuántos tocan a cada uno?`
+                };
+            }
+
+            return { tipo, ...data, puntos: subnivel === 4 ? 80 : 30 };
+        };
+
+        // --- COMPONENTES ---
+
+        // 1. Pantalla de Inicio
+        const StartScreen = ({ onStart }) => {
+            const [nombre, setNombre] = useState('');
+            const [avatarIdx, setAvatarIdx] = useState(0);
+
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white font-creepster p-4 text-center">
+                    <h1 className="text-8xl mb-12 animate-bounce text-red-600 tracking-widest" style={{ textShadow: '8px 8px 0px #000, 0 0 30px #ff0000' }}>
+                        ASCENSO TERRORÍFICO
+                    </h1>
+                    
+                    <div className="bg-slate-800 p-10 rounded-2xl border-8 border-slate-700 shadow-2xl max-w-lg w-full relative overflow-hidden">
+                        {/* Decoración de fondo */}
+                        <div className="absolute top-0 left-0 w-full h-2 bg-red-900"></div>
+                        <div className="absolute bottom-0 left-0 w-full h-2 bg-red-900"></div>
+
+                        <label className="block text-4xl mb-4 text-yellow-500 tracking-widest" style={{ textShadow: '2px 2px 4px #000' }}>ELIGE TU NOMBRE:</label>
+                        <input 
+                            type="text" 
+                            value={nombre} 
+                            onChange={(e) => setNombre(e.target.value)}
+                            className="w-full p-4 text-black text-3xl rounded mb-8 text-center uppercase tracking-widest bg-slate-200 focus:bg-white border-4 border-red-900 focus:border-red-600 outline-none font-creepster"
+                            placeholder="..."
+                            maxLength={12}
+                        />
+
+                        <label className="block text-4xl mb-4 text-yellow-500 tracking-widest" style={{ textShadow: '2px 2px 4px #000' }}>ELIGE TU AVATAR:</label>
+                        <div className="grid grid-cols-4 gap-4 mb-10">
+                            {AVATARES.map((av, idx) => (
+                                <button 
+                                    key={idx}
+                                    onClick={() => setAvatarIdx(idx)}
+                                    className={`text-5xl p-2 rounded transition-transform transform hover:scale-110 ${avatarIdx === idx ? 'bg-red-700 scale-110 ring-4 ring-yellow-500 shadow-[0_0_15px_rgba(255,0,0,0.8)]' : 'bg-slate-700 hover:bg-slate-600'}`}
+                                >
+                                    {av}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={() => nombre && onStart(nombre, AVATARES[avatarIdx])}
+                            disabled={!nombre}
+                            className="w-full bg-red-800 hover:bg-red-600 text-white text-5xl py-6 rounded-xl shadow-[0_6px_0_rgb(60,0,0)] active:shadow-none active:translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed tracking-widest border-2 border-red-500 font-creepster"
+                        >
+                            ¡COMENZAR!
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // 2. Escalera 3D (Visualización Estilo Bombero)
+        const Staircase3D = ({ pisoActual, subNivel, avatar, nombre }) => {
+            const totalPasos = TOTAL_PISOS * PREGUNTAS_POR_PISO;
+            const pasoActual = (pisoActual * PREGUNTAS_POR_PISO) + subNivel;
+            const progreso = pasoActual / totalPasos;
+
+            return (
+                <div className="relative w-full h-[80vh] overflow-hidden bg-gradient-to-b from-transparent to-black/30 rounded-xl mb-4 border-b-4 border-black">
+                    <div className="absolute inset-0 opacity-20 pointer-events-none flex justify-center items-center">
+                        <h2 className="text-8xl font-creepster text-white rotate-12">{PISOS[pisoActual].nombre}</h2>
+                    </div>
+
+                    <div className="absolute inset-0 flex items-end justify-center">
+                        <div className="w-full h-full relative" style={{ perspective: '600px' }}>
+                            <div 
+                                className="absolute w-full h-full transform-style-3d transition-transform duration-1000 ease-in-out"
+                                // Ajustado translateY para que el paso 0 se vea desde el principio
+                                style={{ transform: `rotateX(45deg) translateY(${10 - (progreso * 100)}%)` }}
+                            >
+                                {/* Rieles de la escalera (Laterales) */}
+                                <div className="absolute top-[-2000px] bottom-0 left-[calc(50%-60px)] w-3 bg-gradient-to-r from-gray-400 to-gray-200 border-x border-gray-600 transform translate-z-[-10px]"></div>
+                                <div className="absolute top-[-2000px] bottom-0 right-[calc(50%-60px)] w-3 bg-gradient-to-r from-gray-400 to-gray-200 border-x border-gray-600 transform translate-z-[-10px]"></div>
+
+                                {Array.from({ length: totalPasos + 5 }).map((_, i) => (
+                                    <div 
+                                        key={i}
+                                        className="absolute w-28 left-[calc(50%-56px)] h-3 rounded-full shadow-md flex items-center justify-center"
+                                        style={{ 
+                                            bottom: `${i * 50}px`, 
+                                            transform: `translateZ(${-i * 10}px)`,
+                                            backgroundColor: i < pasoActual ? '#4ade80' : i === pasoActual ? '#fbbf24' : '#bdc3c7',
+                                            border: '1px solid #7f8c8d'
+                                        }}
+                                    >
+                                        {i === pasoActual && (
+                                            // Modificado: Avatar a la izquierda y Nombre encima
+                                            <div className="absolute bottom-2 right-[110%] flex flex-col items-center animate-bounce transition-all duration-500 z-50 min-w-[100px]">
+                                                <div className="bg-black/80 text-white text-xs font-bold px-3 py-1 rounded border border-red-500 whitespace-nowrap font-creepster tracking-widest shadow-[0_0_10px_rgba(255,0,0,0.5)] mb-1">
+                                                    {nombre}
+                                                </div>
+                                                <span className="text-5xl filter drop-shadow-lg z-50 relative">{avatar}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 3. Sistema de Inputs Matemáticos (El Cuaderno)
+        const MathGrid = ({ problem, onSolve }) => {
+            const [inputs, setInputs] = useState({});
+            const [operator, setOperator] = useState('');
+            const [arcIndex, setArcIndex] = useState(-1);
+            
+            useEffect(() => {
+                setInputs({});
+                setOperator('');
+                setArcIndex(-1);
+            }, [problem]);
+
+            const handleInputChange = (key, value) => {
+                if (key.startsWith('res_') || key.startsWith('carry_') || key.startsWith('cociente_')) {
+                    if (value.length > 1) value = value.slice(-1);
+                }
+                setInputs(prev => ({ ...prev, [key]: value }));
+            };
+
+            const checkAnswer = () => {
+                let isCorrect = false;
+
+                if (problem.tipo === 'serie') {
+                    let serieCorrect = true;
+                    problem.hiddenIndices.forEach(idx => {
+                        if (parseInt(inputs[`serie_${idx}`]) !== problem.sequence[idx]) serieCorrect = false;
+                    });
+                    isCorrect = serieCorrect;
+                } 
+                else if (problem.tipo === 'div') {
+                    const expectedQuotientLen = problem.result.toString().length;
+                    let cocienteStr = "";
+                    for(let i=0; i<expectedQuotientLen; i++) {
+                        if(inputs[`cociente_${i}`]) cocienteStr += inputs[`cociente_${i}`];
+                    }
+                    const cocienteInput = parseInt(cocienteStr);
+                    const restoInput = parseInt(inputs['resto_final']); 
+                    
+                    if (cocienteInput === problem.result && restoInput === problem.resto) isCorrect = true;
+                }
+                else {
+                    if (operator !== problem.operator) {
+                        onSolve(false);
+                        return;
+                    }
+                    let constructedNum = "";
+                    for(let i=0; i<10; i++) {
+                        if(inputs[`res_${i}`] !== undefined) constructedNum += inputs[`res_${i}`];
+                    }
+                    if (parseInt(constructedNum) === problem.result) isCorrect = true;
+                }
+
+                onSolve(isCorrect);
+            };
+
+            const renderSerie = () => (
+                <div className="flex flex-wrap gap-2 justify-center items-center mt-8">
+                    {problem.sequence.map((num, idx) => {
+                        const isHidden = problem.hiddenIndices.includes(idx);
+                        return (
+                            <div key={idx} className="flex items-center">
+                                {idx > 0 && <span className="mx-1 text-2xl font-bold">,</span>}
+                                {isHidden ? (
+                                    <input 
+                                        type="number" 
+                                        value={inputs[`serie_${idx}`] || ''}
+                                        className="w-20 h-20 text-center text-3xl border-4 border-dashed border-slate-500 rounded bg-white text-black font-bold font-creepster"
+                                        onChange={(e) => handleInputChange(`serie_${idx}`, e.target.value)}
+                                    />
+                                ) : (
+                                    <span className="text-4xl font-bold font-creepster tracking-widest text-slate-800">{num}</span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+
+            const renderOperationGrid = () => {
+                const strN1 = problem.n1.toString();
+                const strN2 = problem.n2.toString();
+                const maxLen = Math.max(strN1.length, strN2.length);
+                const resultLen = problem.result.toString().length;
+                const totalCols = Math.max(maxLen, resultLen) + 1; 
+
+                const cols = [];
+                for(let i=0; i<totalCols; i++) cols.push(i);
+                
+                const isSum = problem.tipo === 'suma';
+                const isSub = problem.tipo === 'resta';
+                const isMult = problem.tipo === 'multi';
+
+                return (
+                    <div className="inline-grid gap-2 p-4 bg-yellow-50 border border-slate-300 shadow-inner rounded-lg"
+                        style={{ gridTemplateColumns: `repeat(${totalCols}, 3.5rem)`, fontFamily: 'monospace' }}>
+                        
+                        {(isSum || isMult) && cols.map((c, i) => {
+                            const pos = totalCols - 1 - i;
+                            const isUnit = pos === 0; 
+                            return (
+                                <div key={`carry_${i}`} className="h-8 flex items-end justify-center">
+                                    {!isUnit && pos <= maxLen && (
+                                        <input type="text" 
+                                            value={inputs[`carry_${i}`] || ''}
+                                            onChange={(e) => handleInputChange(`carry_${i}`, e.target.value)}
+                                            className="w-6 h-6 border border-red-300 text-center text-sm text-red-600 rounded" placeholder="" />
+                                    )}
+                                </div>
+                            );
+                        })}
+                        {isSub && <div className="col-span-full h-8"></div>}
+
+                        {cols.map((c, i) => {
+                            const posFromRight = totalCols - 1 - i;
+                            const digit = strN1[strN1.length - 1 - posFromRight];
+                            return (
+                                <div key={`n1_${i}`} className="h-14 flex items-center justify-center">
+                                    {digit ? (
+                                        <div className="w-12 h-12 bg-white border-2 border-slate-200 flex items-center justify-center text-2xl font-bold rounded">
+                                            <input 
+                                                maxLength={1} 
+                                                value={inputs[`n1_${i}`] || ''}
+                                                onChange={(e) => handleInputChange(`n1_${i}`, e.target.value)}
+                                                className="w-full h-full text-center font-bold text-xl" 
+                                                placeholder="?"
+                                            />
+                                        </div>
+                                    ) : null}
+                                </div>
+                            );
+                        })}
+
+                        {cols.map((c, i) => {
+                            const posFromRight = totalCols - 1 - i;
+                            const digit = strN2[strN2.length - 1 - posFromRight];
+                            const isFarLeft = i === 0;
+
+                            return (
+                                <div key={`n2_${i}`} className="h-14 flex items-center justify-center relative">
+                                    {isFarLeft && (
+                                        <div className="absolute -left-8 top-2">
+                                            <select 
+                                                className="text-2xl font-bold bg-transparent border border-slate-400 rounded p-1"
+                                                onChange={(e) => setOperator(e.target.value)}
+                                                value={operator}
+                                            >
+                                                <option value="">?</option>
+                                                <option value="+">+</option>
+                                                <option value="-">-</option>
+                                                <option value="x">x</option>
+                                                <option value=":">:</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                    
+                                    {isSub && digit && posFromRight > 0 && (
+                                        <input 
+                                            value={inputs[`sub_carry_${i}`] || ''}
+                                            onChange={(e) => handleInputChange(`sub_carry_${i}`, e.target.value)}
+                                            className="absolute top-1 left-0 w-4 h-4 text-xs border border-blue-400 text-center bg-white z-10" />
+                                    )}
+
+                                    {digit ? (
+                                        <div className="w-12 h-12 bg-white border-2 border-slate-200 flex items-center justify-center text-2xl font-bold rounded">
+                                            <input 
+                                                maxLength={1} 
+                                                value={inputs[`n2_${i}`] || ''}
+                                                onChange={(e) => handleInputChange(`n2_${i}`, e.target.value)}
+                                                className="w-full h-full text-center font-bold text-xl" 
+                                                placeholder="?" 
+                                            />
+                                        </div>
+                                    ) : null}
+                                </div>
+                            );
+                        })}
+
+                        <div className="col-span-full border-b-4 border-black mb-2"></div>
+
+                        {cols.map((c, i) => (
+                            <div key={`res_${i}`} className="h-14 flex items-center justify-center">
+                                <input 
+                                    type="text"
+                                    maxLength={1}
+                                    value={inputs[`res_${i}`] || ''}
+                                    onChange={(e) => handleInputChange(`res_${i}`, e.target.value)}
+                                    className="w-12 h-12 border-2 border-black rounded text-center text-2xl font-bold bg-white"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                );
+            };
+
+            const renderDivision = () => {
+                const dividendDigits = problem.n1.toString().split('');
+                const quotientDigits = problem.result.toString().length;
+
+                return (
+                    <div className="flex flex-col items-center mt-4 font-mono text-xl">
+                        <div className="flex gap-8">
+                            <div className="flex flex-col items-center">
+                                <div className="flex gap-1 relative pt-4">
+                                    {arcIndex >= 0 && (
+                                        <div 
+                                            className="absolute top-0 border-t-2 border-l-2 border-r-2 border-black rounded-t-lg pointer-events-none"
+                                            style={{
+                                                left: '0px',
+                                                height: '10px',
+                                                width: `${(arcIndex + 1) * 2.75}rem`
+                                            }}
+                                        />
+                                    )}
+                                    
+                                    {dividendDigits.map((d, i) => (
+                                        <div 
+                                            key={i} 
+                                            onClick={() => setArcIndex(i)}
+                                            className={`w-10 h-10 border flex items-center justify-center font-bold text-2xl cursor-pointer transition-colors ${i <= arcIndex ? 'bg-yellow-100 border-black' : 'bg-white border-slate-300 hover:bg-slate-100'}`}
+                                            title="Haz clic para seleccionar hasta dónde llega el arco"
+                                        >
+                                            {d} 
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <div className="mt-2 flex flex-col gap-2 w-full items-end">
+                                    {[1, 2, 3, 4].map(row => (
+                                        <div key={row} className="flex justify-end gap-1">
+                                            {Array.from({length: dividendDigits.length}).map((_, col) => (
+                                                <input 
+                                                    key={col}
+                                                    value={inputs[`resto_row${row}_col${col}`] || ''}
+                                                    onChange={e => handleInputChange(`resto_row${row}_col${col}`, e.target.value)}
+                                                    className="w-10 h-10 border border-slate-200 text-center focus:border-blue-500" 
+                                                    placeholder="" 
+                                                />
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col">
+                                <div className="border-l-4 border-b-4 border-black pl-2 pb-2 mb-2">
+                                    <div className="flex gap-1">
+                                        {problem.n2.toString().split('').map((d,i) => (
+                                            <div key={i} className="w-10 h-10 flex items-center justify-center font-bold text-2xl">
+                                                {d}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex gap-1">
+                                    {Array.from({ length: quotientDigits }).map((_, i) => (
+                                        <input 
+                                            key={i}
+                                            maxLength={1}
+                                            value={inputs[`cociente_${i}`] || ''}
+                                            onChange={(e) => handleInputChange(`cociente_${i}`, e.target.value)}
+                                            className="w-10 h-10 border-2 border-black text-center font-bold text-xl bg-white focus:bg-yellow-50"
+                                            placeholder="?"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-6 flex gap-2 items-center border-t-2 border-slate-300 pt-4">
+                            <span className="font-creepster text-red-700">Resto Final:</span>
+                            <input 
+                                value={inputs['resto_final'] || ''}
+                                onChange={(e) => handleInputChange('resto_final', e.target.value)}
+                                className="w-12 h-12 border-4 border-red-800 rounded-full text-center font-bold text-xl bg-red-50"
+                            />
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="w-full bg-white/90 p-6 rounded-xl shadow-2xl border-2 border-slate-400">
+                    <p className="text-2xl font-bold mb-6 text-slate-800 font-sans leading-relaxed">
+                        {problem.enunciado}
+                    </p>
+                    
+                    <div className="flex flex-col items-center">
+                        {problem.tipo === 'serie' && renderSerie()}
+                        {(problem.tipo === 'suma' || problem.tipo === 'resta' || problem.tipo === 'multi') && renderOperationGrid()}
+                        {problem.tipo === 'div' && renderDivision()}
+                    </div>
+
+                    <button 
+                        onClick={checkAnswer}
+                        className="mt-8 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full shadow-lg text-xl transform transition hover:scale-105"
+                    >
+                        COMPROBAR RESPUESTA
+                    </button>
+                </div>
+            );
+        };
+
+        // 4. La Mazmorra (Canvas Full Screen con 3D Blocks)
+        const DungeonGame = ({ onWin }) => {
+            const canvasRef = useRef(null);
+            const [gameOver, setGameOver] = useState(false);
+            
+            const state = useRef({
+                blocks: [],
+                targets: [],
+                matches: 0,
+                droppingBlock: null,
+            });
+
+            useEffect(() => {
+                const handleResize = () => {
+                    if (canvasRef.current) {
+                        canvasRef.current.width = window.innerWidth;
+                        canvasRef.current.height = window.innerHeight;
+                    }
+                };
+                window.addEventListener('resize', handleResize);
+                handleResize(); 
+                return () => window.removeEventListener('resize', handleResize);
+            }, []);
+
+            useEffect(() => {
+                const options = [
+                    { val: 12, label: "12" }, { val: 20, label: "20" }, { val: 15, label: "15" }, 
+                    { val: 24, label: "24" }, { val: 18, label: "18" }, { val: 30, label: "30" }  
+                ];
+                state.current.targets = options;
+
+                const handleKeyDown = (e) => {
+                    if (!state.current.droppingBlock) return;
+                    const currentLane = state.current.droppingBlock.lane;
+                    
+                    if (e.key === 'ArrowLeft') state.current.droppingBlock.lane = Math.max(0, currentLane - 1);
+                    if (e.key === 'ArrowRight') state.current.droppingBlock.lane = Math.min(5, currentLane + 1);
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, []);
+
+            const spawnBlock = () => {
+                const ops = [
+                    { text: "3 x 4", res: 12 }, { text: "4 x 5", res: 20 }, { text: "3 x 5", res: 15 },
+                    { text: "6 x 4", res: 24 }, { text: "3 x 6", res: 18 }, { text: "6 x 5", res: 30 }
+                ];
+                const op = randomElem(ops);
+                return {
+                    lane: randomInt(0, 5),
+                    y: 0,
+                    text: op.text,
+                    res: op.res,
+                };
+            };
+
+            const gameLoop = (time) => {
+                if (gameOver) return;
+                const ctx = canvasRef.current?.getContext('2d');
+                if (!ctx) return;
+                const cvs = canvasRef.current;
+                
+                // Background Full
+                ctx.fillStyle = "#8b4513";
+                ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+                // Bars across full width
+                ctx.fillStyle = "#3e2723";
+                for(let i=0; i<cvs.width; i+=80) ctx.fillRect(i, 0, 15, cvs.height);
+
+                // Title centered
+                ctx.font = "80px Creepster";
+                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                ctx.textAlign = "center";
+                ctx.fillText("MAZMORRA", cvs.width/2, 120);
+                
+                // Stats - MODIFIED (Smaller and lower/left)
+                ctx.font = "20px sans-serif"; 
+                ctx.fillStyle = "#fff";
+                ctx.textAlign = "left";
+                ctx.fillText(`Aciertos: ${state.current.matches}/3`, 20, 280); 
+
+                if (!state.current.droppingBlock) state.current.droppingBlock = spawnBlock();
+
+                state.current.droppingBlock.y += 1.0; // Velocidad reducida
+
+                const laneCount = 6;
+                const sectionW = cvs.width / laneCount;
+
+                // Targets (Dynamic width) - ABAJO DEL TODO
+                state.current.targets.forEach((t, i) => {
+                    ctx.fillStyle = "#5d4037";
+                    // Modificado: Pegados al borde inferior (height - 100)
+                    ctx.fillRect(i * sectionW + 10, cvs.height - 100, sectionW - 20, 100);
+                    ctx.fillStyle = "#fff";
+                    ctx.textAlign = "center";
+                    ctx.font = "40px Arial";
+                    // Texto centrado en el cubo
+                    ctx.fillText(t.label, i * sectionW + sectionW/2, cvs.height - 35);
+                });
+
+                const b = state.current.droppingBlock;
+                const pxX = b.lane * sectionW + sectionW/2;
+                
+                // 3D DRAWING LOGIC (Isometric Box)
+                const boxW = 120;
+                const boxH = 80;
+                const depth = 25;
+                const bx = pxX - boxW/2;
+                const by = b.y;
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "#000";
+
+                // 1. Top Face
+                ctx.fillStyle = "#f7dc6f"; // Light Top
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.lineTo(bx + depth, by - depth);
+                ctx.lineTo(bx + boxW + depth, by - depth);
+                ctx.lineTo(bx + boxW, by);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // 2. Side Face (Right)
+                ctx.fillStyle = "#d4ac0d"; // Dark Side
+                ctx.beginPath();
+                ctx.moveTo(bx + boxW, by);
+                ctx.lineTo(bx + boxW + depth, by - depth);
+                ctx.lineTo(bx + boxW + depth, by + boxH - depth);
+                ctx.lineTo(bx + boxW, by + boxH);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // 3. Front Face
+                ctx.fillStyle = "#f1c40f"; // Main Face
+                ctx.fillRect(bx, by, boxW, boxH);
+                ctx.strokeRect(bx, by, boxW, boxH);
+
+                // Text on Front Face
+                ctx.fillStyle = "#000";
+                ctx.textAlign = "center";
+                ctx.font = "bold 40px Arial";
+                ctx.fillText(b.text, bx + boxW/2, by + boxH/2 + 15);
+
+                // Modificado: Ajuste de colisión para la nueva altura de las cajas (bottom aligned)
+                if (b.y > cvs.height - 150) {
+                    const target = state.current.targets[b.lane];
+                    if (target && target.val === b.res) {
+                        state.current.matches++;
+                        if (state.current.matches >= 3) {
+                            setGameOver(true);
+                            setTimeout(onWin, 2000);
+                        }
+                    }
+                    state.current.droppingBlock = null;
+                }
+
+                if (!gameOver) requestAnimationFrame(gameLoop);
+            };
+
+            useEffect(() => {
+                requestAnimationFrame(gameLoop);
+            }, [gameOver]);
+
+            return (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center">
+                    {gameOver ? (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                            <h1 className="text-8xl font-creepster text-green-500 animate-pulse text-center">¡HAS SALIDO DE LA MAZMORRA!</h1>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Título (Cabecera) ARRIBA */}
+                            <div className="absolute top-4 w-full text-center z-10 pointer-events-none">
+                                <h2 className="text-5xl text-red-600 font-creepster bg-black/50 inline-block p-4 border-2 border-red-600 rounded">
+                                ¡La MAZMORRA es el mejor sitio para que aprendas lo que YA DEBERÍAS SABER!
+                                </h2>
+                            </div>
+
+                            {/* Flechas Verdes DEBAJO de la cabecera */}
+                            <div className="absolute top-48 w-full flex justify-center gap-24 z-20 pointer-events-none animate-pulse">
+                                <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{filter: 'drop-shadow(3px 3px 2px black)'}}>
+                                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                                </svg>
+                                <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{filter: 'drop-shadow(3px 3px 2px black)'}}>
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </div>
+                            
+                            <canvas 
+                                ref={canvasRef} 
+                                className="block absolute top-0 left-0 w-full h-full bg-amber-900"
+                            />
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        // --- APP PRINCIPAL ---
+
+        function App() {
+            const [gameState, setGameState] = useState('start'); // start, playing, dungeon, win
+            const [playerName, setPlayerName] = useState('');
+            const [playerAvatar, setPlayerAvatar] = useState('');
+            
+            const [piso, setPiso] = useState(0);
+            const [subNivel, setSubNivel] = useState(0); 
+            const [score, setScore] = useState(0);
+            
+            const [currentProblem, setCurrentProblem] = useState(null);
+            const [showJump, setShowJump] = useState(false);
+            
+            // Estado para el cronómetro (segundos)
+            const [seconds, setSeconds] = useState(0);
+
+            // Lógica del cronómetro
+            useEffect(() => {
+                let interval = null;
+                if (gameState === 'playing' || gameState === 'dungeon') {
+                    interval = setInterval(() => {
+                        setSeconds(s => s + 1);
+                    }, 1000);
+                } else {
+                    clearInterval(interval);
+                }
+                return () => clearInterval(interval);
+            }, [gameState]);
+
+            const formatTime = (totalSeconds) => {
+                const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+                const s = (totalSeconds % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            };
+
+            const startGame = (name, avatar) => {
+                setPlayerName(name);
+                setPlayerAvatar(avatar);
+                setPiso(0);
+                setSubNivel(0);
+                setScore(0);
+                setSeconds(0); // Reiniciar cronómetro
+                setGameState('playing');
+                setCurrentProblem(generarProblema(0, 0));
+            };
+
+            const handleSolve = (isCorrect) => {
+                if (isCorrect) {
+                    setScore(s => s + currentProblem.puntos);
+                    setShowJump(true);
+                    
+                    setTimeout(() => setShowJump(false), 1500);
+
+                    setTimeout(() => {
+                        let nextSub = subNivel + 1;
+                        let nextPiso = piso;
+
+                        if (nextSub >= PREGUNTAS_POR_PISO) {
+                            nextSub = 0;
+                            nextPiso++;
+                        }
+
+                        if (nextPiso >= TOTAL_PISOS) {
+                            setGameState('win');
+                        } else {
+                            setSubNivel(nextSub);
+                            setPiso(nextPiso);
+                            setCurrentProblem(generarProblema(nextPiso, nextSub));
+                        }
+                    }, 1500);
+
+                } else {
+                    setScore(s => Math.max(0, s - 10)); 
+                    setGameState('dungeon');
+                }
+            };
+
+            const handleDungeonWin = () => {
+                setGameState('playing');
+            };
+
+            if (gameState === 'start') return <StartScreen onStart={startGame} />;
+            
+            if (gameState === 'win') return (
+                <div className="min-h-screen bg-blue-200 flex flex-col items-center justify-center font-creepster text-center p-8">
+                    <h1 className="text-6xl text-yellow-600 mb-4 animate-bounce">¡EL CIELO EN LA TIERRA!</h1>
+                    <div className="text-9xl mb-8">{playerAvatar}</div>
+                    <p className="text-4xl text-slate-800 mb-8">¡Enhorabuena {playerName}!</p>
+                    <p className="text-3xl text-slate-600 mb-4">Puntuación Final: {score}</p>
+                    <p className="text-3xl text-red-600">Tiempo Total: {formatTime(seconds)}</p>
+                    <button onClick={() => setGameState('start')} className="mt-8 bg-purple-600 text-white p-4 rounded text-2xl">Jugar Otra Vez</button>
+                </div>
+            );
+
+            const currentPisoStyle = PISOS[piso];
+            
+            return (
+                <div 
+                    className="min-h-screen transition-colors duration-1000 flex flex-col relative"
+                    style={{ backgroundColor: currentPisoStyle.color }}
+                >
+                    <header className="flex justify-between items-center p-4 bg-black/20 text-white font-creepster shadow-lg">
+                        <div className="text-2xl animate-pulse tracking-widest">{currentPisoStyle.nombre}</div>
+                        <div className="flex gap-4 items-center">
+                            {/* Cronómetro con estilo de terror */}
+                            <span className="text-2xl font-creepster text-red-400 bg-black/50 px-3 py-1 rounded border border-red-900 shadow-[0_0_10px_rgba(255,0,0,0.5)]">
+                            ⏱ {formatTime(seconds)}
+                            </span>
+                            <span className="text-xl font-sans font-bold bg-white/20 px-3 py-1 rounded">Puntos: {score}</span>
+                            <span className="text-xl font-sans font-bold bg-white/20 px-3 py-1 rounded">Prueba: {subNivel + 1}/5</span>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 container mx-auto p-4 flex flex-col md:flex-row gap-6">
+                        <div className="w-full md:w-1/3 flex flex-col">
+                            <Staircase3D pisoActual={piso} subNivel={subNivel} avatar={playerAvatar} nombre={playerName} />
+                            <div className="bg-white/50 p-4 rounded-lg text-center font-sans text-sm">
+                                <p>¡Supera la prueba para subir el peldaño!</p>
+                            </div>
+                        </div>
+
+                        <div className="w-full md:w-2/3 relative">
+                            {showJump && (
+                                <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+                                    <div className="bg-white border-4 border-black p-8 rounded-full transform rotate-12 shadow-2xl animate-ping">
+                                        <span className="text-6xl font-black font-comic">¡UOU!</span>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <MathGrid problem={currentProblem} onSolve={handleSolve} />
+                        </div>
+                    </main>
+
+                    <footer className="p-2 text-center text-xs opacity-50 font-sans text-white">
+                        Preguntas 1-4: 30 pts | Pregunta 5: 80 pts | Fallo: -10 pts
+                    </footer>
+
+                    {/* MODIFICACIÓN: La mazmorra se muestra POR ENCIMA (Overlay) sin borrar la pantalla anterior */}
+                    {gameState === 'dungeon' && <DungeonGame onWin={handleDungeonWin} />}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
